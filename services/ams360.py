@@ -192,21 +192,24 @@ class AMS360Service:
         """
         self._ensure_session()
         
-        envelope = f'''<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-<s:Body>
-<CustomerGetById xmlns="http://www.WSAPI.AMS360.com/v3.0">
-<Request xmlns:a="http://www.WSAPI.AMS360.com/v3.0/DataContract" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
-<a:Ticket>{self.session['ticket']}</a:Ticket>
-<a:CustomerId>{customer_id}</a:CustomerId>
-</Request>
-</CustomerGetById>
-</s:Body>
+        envelope = f'''<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Header>
+    <WSAPISession xmlns="http://www.WSAPI.AMS360.com/v3.0">
+      <Ticket>{self.session['ticket']}</Ticket>
+    </WSAPISession>
+  </s:Header>
+  <s:Body>
+    <CustomerGetById xmlns="http://www.WSAPI.AMS360.com/v3.0">
+      <Request xmlns:a="http://www.WSAPI.AMS360.com/v3.0/DataContract" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <a:CustomerId>{customer_id}</a:CustomerId>
+      </Request>
+    </CustomerGetById>
+  </s:Body>
 </s:Envelope>'''
         
         headers = {
             'Content-Type': 'text/xml; charset=utf-8',
-            'SOAPAction': '"http://www.WSAPI.AMS360.com/v3.0/WSAPIServiceContract/PolicyGetListByCustomer"'
+            'SOAPAction': 'http://www.WSAPI.AMS360.com/v3.0/WSAPIServiceContract/CustomerGetById'
         }
         
         try:
@@ -214,7 +217,7 @@ class AMS360Service:
             r.raise_for_status()
             parsed = xmltodict.parse(r.text)
             
-            logger.info(f"AMS360 policies retrieved for customer: {customer_id}")
+            logger.info(f"AMS360 customer details retrieved for customer: {customer_id}")
             return parsed
             
         except Exception as e:
@@ -232,21 +235,24 @@ class AMS360Service:
         """
         self._ensure_session()
         
-        envelope = f'''<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-<s:Body>
-<PolicyGetListByCustomer xmlns="http://www.WSAPI.AMS360.com/v3.0">
-<Request xmlns:a="http://www.WSAPI.AMS360.com/v3.0/DataContract" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
-<a:Ticket>{self.session['ticket']}</a:Ticket>
-<a:CustomerId>{customer_id}</a:CustomerId>
-</Request>
-</PolicyGetListByCustomer>
-</s:Body>
+        envelope = f'''<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Header>
+    <WSAPISession xmlns="http://www.WSAPI.AMS360.com/v3.0">
+      <Ticket>{self.session['ticket']}</Ticket>
+    </WSAPISession>
+  </s:Header>
+  <s:Body>
+    <PolicyGetListByCustomerId xmlns="http://www.WSAPI.AMS360.com/v3.0">
+      <Request xmlns:a="http://www.WSAPI.AMS360.com/v3.0/DataContract" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <a:CustomerId>{customer_id}</a:CustomerId>
+      </Request>
+    </PolicyGetListByCustomerId>
+  </s:Body>
 </s:Envelope>'''
         
         headers = {
             'Content-Type': 'text/xml; charset=utf-8',
-            'SOAPAction': '"http://www.WSAPI.AMS360.com/v3.0/WSAPIServiceContract/PolicyGetListByCustomer"'
+            'SOAPAction': 'http://www.WSAPI.AMS360.com/v3.0/WSAPIServiceContract/PolicyGetListByCustomerId'
         }
         
         try:

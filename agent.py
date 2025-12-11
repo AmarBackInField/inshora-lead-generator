@@ -29,6 +29,10 @@ from config import (
     AGENT_SYSTEM_INSTRUCTIONS,
     get_greeting_prompt
 )
+from config.knowledgebase import get_knowledge_base
+
+# Load knowledge base once at module level
+INSHORA_KNOWLEDGE_BASE = get_knowledge_base()
 
 load_dotenv()
 logger = logging.getLogger("telephony-agent")
@@ -666,15 +670,71 @@ async def entrypoint(ctx: JobContext):
     agencyzoom_service = AgencyZoomService()
     insurance_service = InsuranceService(agencyzoom_service=agencyzoom_service)
     
+    # Build comprehensive instructions with knowledge base
+    base_instructions = AGENT_SYSTEM_INSTRUCTIONS
+    
+    instructions = f"""{base_instructions}
+
+{INSHORA_KNOWLEDGE_BASE}
+
+USE THIS KNOWLEDGE BASE TO:
+- Answer questions about Texas insurance requirements accurately
+- Handle objections professionally using the provided scripts
+- Adapt your tone based on the caller's communication style
+- Mention relevant promotions and discounts when appropriate
+- Cross-sell based on the lead scoring matrix
+- Know when to escalate to a human agent
+- Use rebuttals when needed to keep the conversation productive
+
+AVAILABLE TOOLS - Use these during the conversation:
+
+1. CALL MANAGEMENT:
+   - transfer_to_human: Transfer the caller to a human agent when escalation is needed
+   - end_call: End the call gracefully when conversation is complete
+
+2. INSURANCE DATA COLLECTION:
+   - set_user_action: FIRST call this to set action type ("add" or "update") and insurance type ("home", "auto", "flood", "life", "commercial")
+   - collect_home_insurance_data: Collect home insurance details (name, DOB, address, phone, email, solar panels, pool, roof age, pets, current provider)
+   - collect_auto_insurance_data: Collect auto insurance details (driver info, license, VIN, vehicle make/model, coverage type)
+   - collect_flood_insurance_data: Collect flood insurance details (name, address, email)
+   - collect_life_insurance_data: Collect life insurance details (name, DOB, appointment request, policy type)
+   - collect_commercial_insurance_data: Collect commercial insurance details (business name, type, address, inventory limit, building coverage)
+   - submit_quote_request: Submit the collected insurance data for quote processing
+
+3. AMS360 POLICY LOOKUP (For Existing Customers):
+   - get_ams360_customer_policies: Retrieve all policies for a specific customer
+
+4. AGENCYZOOM CRM INTEGRATION:
+   - create_agencyzoom_lead: Create a new lead in AgencyZoom with customer details
+   - submit_collected_data_to_agencyzoom: Submit ALL collected insurance data to AgencyZoom as a comprehensive lead
+
+WORKFLOW:
+1. Greet the caller and identify their insurance needs
+2. For existing customers, use AMS360 tools to look up their policies
+3. For new leads, call set_user_action with the appropriate action and insurance type
+4. Use the relevant collect_*_insurance_data tool to gather information
+5. Call submit_quote_request to process the quote
+6. Call submit_collected_data_to_agencyzoom to save lead to CRM
+7. If caller requests human assistance, use transfer_to_human"""
+    
     # Initialize the insurance receptionist agent with function tools
     agent = TelephonyAgent(
         insurance_service=insurance_service,
         ams360_service=ams360_service,
         agencyzoom_service=agencyzoom_service,
-        instructions=AGENT_SYSTEM_INSTRUCTIONS
+        instructions=instructions
     )
     
-    logger.info("Telephony agent initialized with insurance function tools")
+    logger.info("=" * 60)
+    logger.info("Telephony Agent Initialized")
+    logger.info(f"Knowledge Base: Loaded ({len(INSHORA_KNOWLEDGE_BASE)} characters)")
+    logger.info("Available Tools:")
+    logger.info("  - Insurance Data Collection (5 tools)")
+    logger.info("  - AMS360 Policy Lookup (3 tools)")
+    logger.info("  - AgencyZoom CRM Integration (5 tools)")
+    logger.info(f"Total Tools: 13")
+    logger.info(f"Instructions Length: {len(instructions)} characters")
+    logger.info("=" * 60)
     
     # Configure the voice processing pipeline optimized for telephony
     session = AgentSession(

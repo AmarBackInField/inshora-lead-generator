@@ -1,6 +1,13 @@
 import logging
 import sys
-from services.agent_service import run_agent
+from pathlib import Path
+
+# Add project root to path FIRST so root services takes priority
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import agent_service from local services directory  
+from outboundService.services.agent_service import run_agent
 
 # Setup basic logging before running
 logging.basicConfig(

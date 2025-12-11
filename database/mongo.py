@@ -20,7 +20,7 @@ class MongoDBManager:
     MongoDB Manager for handling chatbot instances and conversation history
     """
     
-    def __init__(self, mongodb_uri: str, database_name: str = "Inshora"):
+    def __init__(self, mongodb_uri: str, database_name: str = "Inshoraa"):
         """
         Initialize MongoDB Manager
         
@@ -190,7 +190,7 @@ class MongoDBManager:
 _mongodb_manager = None
 
 
-def get_mongodb_manager(mongodb_uri: Optional[str] = None, database_name: str = "Inshora") -> MongoDBManager:
+def get_mongodb_manager(mongodb_uri: Optional[str] = None, database_name: str = "Inshoraa") -> MongoDBManager:
     """
     Get or create MongoDB Manager singleton instance
     

@@ -21,9 +21,15 @@ class AgencyZoomService:
     
     def __init__(self):
         """Initialize AgencyZoom service."""
-        self.api_key = AGENCYZOOM_API_KEY
+        # Set these FIRST before calling _get_authentication
         self.base_url = AGENCYZOOM_BASE_URL
         self.agency_id = AGENCYZOOM_AGENCY_ID
+        self.username = os.getenv("AGENCYZOOM_USERNAME")
+        self.password = os.getenv("AGENCYZOOM_PASSWORD")
+        
+        logger.info(f"AgencyZoom config - Base URL: {self.base_url}")
+        logger.info(f"AgencyZoom config - Username: {self.username if self.username else 'NOT SET'}")
+        logger.info(f"AgencyZoom config - Password: {'***' if self.password else 'NOT SET'}")
         
         # Ensure base_url ends with /v1
         if self.base_url and not self.base_url.endswith('/v1'):
@@ -32,8 +38,14 @@ class AgencyZoomService:
             else:
                 self.base_url += 'v1'
         
+        # NOW authenticate (after credentials are set)
+        self.api_key = self._get_authentication()
+        
         if not self.api_key:
-            logger.warning("AgencyZoom API key not configured")
+            logger.error("❌ AgencyZoom API key not configured - Authentication failed!")
+            logger.error("Please set AGENCYZOOM_USERNAME and AGENCYZOOM_PASSWORD in your .env file")
+        else:
+            logger.info(f"✓ AgencyZoom authenticated successfully - JWT token received")
         
         logger.info(f"AgencyZoomService initialized with base URL: {self.base_url}")
     
@@ -44,6 +56,39 @@ class AgencyZoomService:
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
+    
+    def _get_auth_headers(self) -> Dict[str, str]:
+        """Get headers for authentication (no Bearer token)."""
+        return {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+
+    def _get_authentication(self) -> Optional[str]:
+        """Authenticate and return JWT token."""
+        if not self.username or not self.password:
+            logger.warning("AgencyZoom credentials not configured (AGENCYZOOM_USERNAME/AGENCYZOOM_PASSWORD)")
+            return None
+        
+        url = f"{self.base_url}/api/auth/login"
+        payload = {
+            "username": self.username,
+            "password": self.password,
+            "version": "v1"
+        }
+        # Use auth headers (without Bearer token) for login
+        headers = self._get_auth_headers()
+        
+        try:
+            logger.info(f"Authenticating with AgencyZoom at {url} as {self.username}")
+            response = requests.post(url, json=payload, headers=headers, timeout=15)
+            response.raise_for_status()
+            jwt_token = response.json().get("jwt")
+            logger.info("AgencyZoom authentication successful")
+            return jwt_token
+        except requests.exceptions.RequestException as e:
+            logger.exception(f"AgencyZoom authentication failed: {e}")
+            return None
     
     def create_lead(self, lead_data: Dict[str, Any]) -> Optional[Dict]:
         """Create a new lead in AgencyZoom with comprehensive insurance data.
@@ -132,6 +177,7 @@ class AgencyZoomService:
             payload["customFields"] = custom_fields
         
         try:
+            logger.info(f"AgencyZoom lead payload: {payload}")
             r = requests.post(endpoint, json=payload, headers=self._get_headers(), timeout=15)
             r.raise_for_status()
             result = r.json()

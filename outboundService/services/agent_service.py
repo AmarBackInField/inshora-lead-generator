@@ -4,7 +4,6 @@ import asyncio
 import logging
 import sys
 import aiohttp
-import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -17,7 +16,6 @@ from livekit.plugins import (
     openai,
     cartesia,
     deepgram,
-    noise_cancellation,
     silero,
     google
 )
@@ -88,6 +86,20 @@ logger.info(f"OPENAI_API_KEY: {'SET' if os.getenv('OPENAI_API_KEY') else 'NOT SE
 logger.info(f"STT_MODEL: {STT_MODEL}")
 logger.info(f"LLM_MODEL: {LLM_MODEL}")
 logger.info(f"INSHORA_KNOWLEDGE_BASE: Loaded ({len(INSHORA_KNOWLEDGE_BASE)} characters)")
+logger.info("-" * 60)
+logger.info("Available Agent Tools:")
+logger.info("  - transfer_to_human: Transfer SIP caller to human agent")
+logger.info("  - end_call: End call gracefully")
+logger.info("  - set_user_action: Set action type (add/update) and insurance type")
+logger.info("  - collect_home_insurance_data: Collect home insurance information")
+logger.info("  - collect_auto_insurance_data: Collect auto insurance information")
+logger.info("  - collect_flood_insurance_data: Collect flood insurance information")
+logger.info("  - collect_life_insurance_data: Collect life insurance information")
+logger.info("  - collect_commercial_insurance_data: Collect commercial insurance information")
+logger.info("  - submit_quote_request: Submit collected insurance quote request")
+logger.info("  - create_agencyzoom_lead: Create new lead in AgencyZoom")
+logger.info("  - submit_collected_data_to_agencyzoom: Submit all collected data to AgencyZoom")
+logger.info(f"Total Tools: 11")
 logger.info("=" * 60)
 
 
@@ -701,7 +713,7 @@ async def entrypoint(ctx: agents.JobContext):
         # Start with the dynamic instruction
         base_instructions = dynamic_instruction
         
-        # Add the Inshora Knowledge Base
+        # Add the Inshora Knowledge Base and tool instructions
         instructions = f"""{base_instructions}
 
 {INSHORA_KNOWLEDGE_BASE}
@@ -712,8 +724,35 @@ USE THIS KNOWLEDGE BASE TO:
 - Adapt your tone based on the caller's communication style
 - Mention relevant promotions and discounts when appropriate
 - Cross-sell based on the lead scoring matrix
-- Know when to escalate to a human agent (use transfer_to_human tool)
-- Use rebuttals when needed to keep the conversation productive"""
+- Know when to escalate to a human agent
+- Use rebuttals when needed to keep the conversation productive
+
+AVAILABLE TOOLS - Use these during the conversation:
+
+1. CALL MANAGEMENT:
+   - transfer_to_human: Transfer the caller to a human agent when escalation is needed
+   - end_call: End the call gracefully when conversation is complete
+
+2. INSURANCE DATA COLLECTION:
+   - set_user_action: FIRST call this to set action type ("add" or "update") and insurance type ("home", "auto", "flood", "life", "commercial")
+   - collect_home_insurance_data: Collect home insurance details (name, DOB, address, phone, email, solar panels, pool, roof age, pets, current provider)
+   - collect_auto_insurance_data: Collect auto insurance details (driver info, license, VIN, vehicle make/model, coverage type)
+   - collect_flood_insurance_data: Collect flood insurance details (name, address, email)
+   - collect_life_insurance_data: Collect life insurance details (name, DOB, appointment request, policy type)
+   - collect_commercial_insurance_data: Collect commercial insurance details (business name, type, address, inventory limit, building coverage)
+   - submit_quote_request: Submit the collected insurance data for quote processing
+
+3. CRM INTEGRATION:
+   - create_agencyzoom_lead: Create a new lead in AgencyZoom with customer details
+   - submit_collected_data_to_agencyzoom: Submit ALL collected insurance data to AgencyZoom as a comprehensive lead
+
+WORKFLOW:
+1. Greet the caller and identify their insurance needs
+2. Call set_user_action with the appropriate action and insurance type
+3. Use the relevant collect_*_insurance_data tool to gather information
+4. Call submit_quote_request to process the quote
+5. Call submit_collected_data_to_agencyzoom to save lead to CRM
+6. If caller requests human assistance or meets escalation condition, use transfer_to_human"""
         
         # Add escalation condition if provided
         if escalation_condition:
@@ -751,8 +790,35 @@ USE THIS KNOWLEDGE BASE TO:
 - Adapt your tone based on the caller's communication style
 - Mention relevant promotions and discounts when appropriate
 - Cross-sell based on the lead scoring matrix
-- Know when to escalate to a human agent (use transfer_to_human tool)
-- Use rebuttals when needed to keep the conversation productive"""
+- Know when to escalate to a human agent
+- Use rebuttals when needed to keep the conversation productive
+
+AVAILABLE TOOLS - Use these during the conversation:
+
+1. CALL MANAGEMENT:
+   - transfer_to_human: Transfer the caller to a human agent when escalation is needed
+   - end_call: End the call gracefully when conversation is complete
+
+2. INSURANCE DATA COLLECTION:
+   - set_user_action: FIRST call this to set action type ("add" or "update") and insurance type ("home", "auto", "flood", "life", "commercial")
+   - collect_home_insurance_data: Collect home insurance details (name, DOB, address, phone, email, solar panels, pool, roof age, pets, current provider)
+   - collect_auto_insurance_data: Collect auto insurance details (driver info, license, VIN, vehicle make/model, coverage type)
+   - collect_flood_insurance_data: Collect flood insurance details (name, address, email)
+   - collect_life_insurance_data: Collect life insurance details (name, DOB, appointment request, policy type)
+   - collect_commercial_insurance_data: Collect commercial insurance details (business name, type, address, inventory limit, building coverage)
+   - submit_quote_request: Submit the collected insurance data for quote processing
+
+3. CRM INTEGRATION:
+   - create_agencyzoom_lead: Create a new lead in AgencyZoom with customer details
+   - submit_collected_data_to_agencyzoom: Submit ALL collected insurance data to AgencyZoom as a comprehensive lead
+
+WORKFLOW:
+1. Greet the caller and identify their insurance needs
+2. Call set_user_action with the appropriate action and insurance type
+3. Use the relevant collect_*_insurance_data tool to gather information
+4. Call submit_quote_request to process the quote
+5. Call submit_collected_data_to_agencyzoom to save lead to CRM
+6. If caller requests human assistance, use transfer_to_human"""
         language = "en"
         voice_id = "21m00Tcm4TlvDq8ikWAM"
         provider = "openai"
@@ -937,7 +1003,7 @@ USE THIS KNOWLEDGE BASE TO:
     # Initialize assistant and start session
     # --------------------------------------------------------
     assistant = Assistant(instructions=instructions)
-    room_options = RoomInputOptions(noise_cancellation=noise_cancellation.BVC())
+    room_options = RoomInputOptions()
 
     try:
         logger.info("Starting agent session...")

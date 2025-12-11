@@ -6,7 +6,8 @@ livekit-plugins-openai
 livekit-plugins-cartesia
 livekit-plugins-silero
 livekit-plugins-elevenlabs
-
+livekit-plugins-google
+pymongo
 # RAG and Vector Database
 langchain
 langchain-openai

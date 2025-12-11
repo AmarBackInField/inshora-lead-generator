@@ -524,45 +524,102 @@ def execute_function_call(function_name: str, arguments: Dict, thread_id: str) -
         
         # AMS360 Functions
         elif function_name == "get_policy_by_number":
-            result,result2,result3 = ams360_service.get_policy_by_number(arguments.get("policy_number"))
+            from formating.full_policy import extract_policy_fields, extract_customer_fields
+            
+            result, customer_data, policy_id = ams360_service.get_policy_by_number(arguments.get("policy_number"))
             if result:
                 try:
-                    policy_result = result.get('s:Envelope', {}).get('s:Body', {}).get('PolicyGetResponse', {})
-                    if not policy_result:
-                        policy_result = result.get('Envelope', {}).get('Body', {}).get('PolicyGetResponse', {})
+                    # Extract policy fields using the formatting function
+                    policy_info = extract_policy_fields(result)
                     
-                    policy_data = policy_result.get('PolicyGetResult', {}).get('a:Policy', {})
+                    # Format dates nicely
+                    def format_date(date_str):
+                        if date_str and 'T' in str(date_str):
+                            return date_str.split('T')[0]
+                        return date_str or 'N/A'
                     
-                    if policy_data:
-                        policy_number = policy_data.get('a:PolicyNumber', 'N/A')
-                        customer_id = policy_data.get('a:CustomerId', 'N/A')
-                        policy_type = policy_data.get('a:PolicyTypeOfBusiness', 'N/A')
-                        effective_date = policy_data.get('a:PolicyEffectiveDate', 'N/A')
-                        expiration_date = policy_data.get('a:PolicyExpirationDate', 'N/A')
-                        full_term_premium = policy_data.get('a:FullTermPremium', 'N/A')
-                        policy_status = policy_data.get('a:PolicyStatus', 'N/A')
-                        
-                        # Format dates nicely
-                        if effective_date != 'N/A' and 'T' in effective_date:
-                            effective_date = effective_date.split('T')[0]
-                        if expiration_date != 'N/A' and 'T' in expiration_date:
-                            expiration_date = expiration_date.split('T')[0]
-                        
-                        return f"Found policy {policy_number} in AMS360. Type: {policy_type}, Status: {policy_status}, Effective Date: {effective_date}, Expiration Date: {expiration_date}, Full Term Premium: ${full_term_premium}. Customer ID: {customer_id}."
-                    else:
-                        return f"Found policy information in AMS360 for policy number {arguments.get('policy_number')}."
+                    # Build user-friendly message
+                    message = f"✓ Found Policy in AMS360:\n\n"
+                    message += f"📋 Policy Number: {policy_info.get('PolicyNumber', 'N/A')}\n"
+                    message += f"📅 Effective Date: {format_date(policy_info.get('EffectiveDate'))}\n"
+                    message += f"📅 Expiration Date: {format_date(policy_info.get('ExpirationDate'))}\n"
+                    message += f"💼 Policy Type: {policy_info.get('PolicyTypeOfBusiness', 'N/A')}\n"
+                    message += f"📊 Line of Business: {policy_info.get('LineDescription', 'N/A')}\n"
+                    message += f"💰 Full Term Premium: ${policy_info.get('FullTermPremium', 'N/A')}\n"
+                    message += f"💳 Bill Method: {policy_info.get('BillMethod', 'N/A')}\n"
+                    
+                    # Add latest transaction info if available
+                    if policy_info.get('LatestTransactionType'):
+                        message += f"\n📝 Latest Transaction:\n"
+                        message += f"   Type: {policy_info.get('LatestTransactionType', 'N/A')}\n"
+                        message += f"   Date: {format_date(policy_info.get('LatestTransactionDate'))}\n"
+                        message += f"   Premium: ${policy_info.get('LatestPremium', 'N/A')}\n"
+                    
+                    # Add customer info if available
+                    if customer_data:
+                        try:
+                            customer_info = extract_customer_fields(customer_data)
+                            message += f"\n👤 Customer Information:\n"
+                            message += f"   Name: {customer_info.get('FirstName', '')} {customer_info.get('LastName', '')}\n"
+                            message += f"   Customer ID: {customer_info.get('CustomerId', 'N/A')}\n"
+                            
+                            # Add contact info if available
+                            if customer_info.get('Email'):
+                                message += f"   Email: {customer_info.get('Email')}\n"
+                            if customer_info.get('CellPhone'):
+                                message += f"   Phone: {customer_info.get('CellAreaCode', '')}{customer_info.get('CellPhone', '')}\n"
+                            if customer_info.get('City') and customer_info.get('State'):
+                                message += f"   Location: {customer_info.get('City')}, {customer_info.get('State')}\n"
+                        except Exception as e:
+                            logger.warning(f"Could not extract customer details: {e}")
+                    
+                    return message
+                    
                 except Exception as e:
-                    logger.warning(f"Error parsing policy details: {e}")
+                    logger.warning(f"Error formatting policy details: {e}")
                     return f"Found policy information in AMS360 for policy number {arguments.get('policy_number')}."
             else:
-                return f"No policy found in AMS360 with policy number {arguments.get('policy_number')}."
+                return f"❌ No policy found in AMS360 with policy number {arguments.get('policy_number')}."
         
         elif function_name == "get_ams360_customer_policies":
+            from formating.full_policy import extract_policy_list
+            
             result = ams360_service.get_customer_policies(arguments.get("customer_id"))
             if result:
-                return f"Retrieved policies for customer {arguments.get('customer_id')} from AMS360 successfully."
+                try:
+                    # Extract policy list using the formatting function
+                    policy_list = extract_policy_list(result)
+                    
+                    if not policy_list:
+                        return f"No policies found for customer {arguments.get('customer_id')} in AMS360."
+                    
+                    # Format dates nicely
+                    def format_date(date_str):
+                        if date_str and 'T' in str(date_str):
+                            return date_str.split('T')[0]
+                        return date_str or 'N/A'
+                    
+                    # Build user-friendly message
+                    message = f"✓ Found {len(policy_list)} Policy(ies) for Customer ID: {arguments.get('customer_id')}\n\n"
+                    
+                    for idx, policy in enumerate(policy_list, 1):
+                        message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                        message += f"Policy #{idx}:\n"
+                        message += f"📋 Policy Number: {policy.get('PolicyNumber', 'N/A')}\n"
+                        message += f"💼 Type: {policy.get('PolicyTypeOfBusiness', 'N/A')}\n"
+                        message += f"📊 Status: {policy.get('PolicyStatus', 'N/A')}\n"
+                        message += f"📅 Effective: {format_date(policy.get('PolicyEffectiveDate'))}\n"
+                        message += f"📅 Expiration: {format_date(policy.get('PolicyExpirationDate'))}\n"
+                        message += f"🏢 Company: {policy.get('WritingCompanyCode', 'N/A')}\n"
+                        message += "\n"
+                    
+                    return message
+                    
+                except Exception as e:
+                    logger.warning(f"Error formatting policy list: {e}")
+                    return f"Retrieved policies for customer {arguments.get('customer_id')} from AMS360 successfully."
             else:
-                return f"No policies found for customer {arguments.get('customer_id')} in AMS360."
+                return f"❌ No policies found for customer {arguments.get('customer_id')} in AMS360."
         
         # AgencyZoom Functions
         elif function_name == "create_agencyzoom_lead":
@@ -692,9 +749,10 @@ async def chat(request: ChatRequest):
         # Handle function calls if present
         while assistant_message.tool_calls:
             # Add assistant's response with tool calls to history
+            # Note: content can be None when tool calls are present, so we use empty string as fallback
             messages.append({
                 "role": "assistant",
-                "content": assistant_message.content,
+                "content": assistant_message.content or "",
                 "tool_calls": [
                     {
                         "id": tc.id,
@@ -741,7 +799,7 @@ async def chat(request: ChatRequest):
         # Add final assistant message to history
         messages.append({
             "role": "assistant",
-            "content": assistant_message.content
+            "content": assistant_message.content or ""
         })
         
         logger.info(f"Chat response generated - Thread: {request.thread_id}")
