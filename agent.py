@@ -294,72 +294,149 @@ class TelephonyAgent(Agent):
         logger.info("🔧 Agent tool called: submit_quote_request()")
         return self.insurance_service.submit_quote_request()
     
-    # AMS360 Integration Tools
-    @function_tool()
-    async def search_ams360_customer_by_phone(self, phone: str) -> str:
-        """Search for a customer in AMS360 by phone number.
+    # # AMS360 Integration Tools
+    # @function_tool()
+    # async def search_ams360_customer_by_phone(self, phone: str) -> str:
+    #     """Search for a customer in AMS360 by phone number.
         
-        Args:
-            phone: Phone number to search for in AMS360
+    #     Args:
+    #         phone: Phone number to search for in AMS360
         
-        Returns:
-            String message with search results or error
-        """
-        logger.info(f"🔧 Agent tool called: search_ams360_customer_by_phone({phone})")
+    #     Returns:
+    #         String message with search results or error
+    #     """
+    #     logger.info(f"🔧 Agent tool called: search_ams360_customer_by_phone({phone})")
         
-        try:
-            result = self.ams360_service.search_customer_by_phone(phone)
-            if result:
-                return f"Found customer information in AMS360 for phone {phone}. Customer data retrieved successfully."
-            else:
-                return f"No customer found in AMS360 with phone number {phone}."
-        except Exception as e:
-            logger.error(f"Error searching AMS360 by phone: {e}")
-            return f"Error searching AMS360: {str(e)}"
+    #     try:
+    #         result = self.ams360_service.search_customer_by_phone(phone)
+    #         if result:
+    #             return f"Found customer information in AMS360 for phone {phone}. Customer data retrieved successfully."
+    #         else:
+    #             return f"No customer found in AMS360 with phone number {phone}."
+    #     except Exception as e:
+    #         logger.error(f"Error searching AMS360 by phone: {e}")
+    #         return f"Error searching AMS360: {str(e)}"
+    
+    # @function_tool()
+    # async def search_ams360_customer_by_name(self, name: str) -> str:
+    #     """Search for a customer in AMS360 by name.
+        
+    #     Args:
+    #         name: Customer name or name prefix to search for
+        
+    #     Returns:
+    #         String message with search results or error
+    #     """
+    #     logger.info(f"🔧 Agent tool called: search_ams360_customer_by_name({name})")
+        
+    #     try:
+    #         result = self.ams360_service.search_customer_by_name(name)
+    #         if result:
+    #             return f"Found customer information in AMS360 for name '{name}'. Customer data retrieved successfully."
+    #         else:
+    #             return f"No customer found in AMS360 with name '{name}'."
+    #     except Exception as e:
+    #         logger.error(f"Error searching AMS360 by name: {e}")
+    #         return f"Error searching AMS360: {str(e)}"
+    
+    # @function_tool()
+    # async def get_ams360_customer_policies(self, customer_id: str) -> str:
+    #     """Get all policies for a specific customer from AMS360.
+        
+    #     Args:
+    #         customer_id: The AMS360 customer ID to retrieve policies for
+        
+    #     Returns:
+    #         String message with policies information or error
+    #     """
+    #     logger.info(f"🔧 Agent tool called: get_ams360_customer_policies({customer_id})")
+        
+    #     try:
+    #         result = self.ams360_service.get_customer_policies(customer_id)
+    #         if result:
+    #             return f"Retrieved policies for customer {customer_id} from AMS360 successfully."
+    #         else:
+    #             return f"No policies found for customer {customer_id} in AMS360."
+    #     except Exception as e:
+    #         logger.error(f"Error getting AMS360 customer policies: {e}")
+    #         return f"Error retrieving policies: {str(e)}"
     
     @function_tool()
-    async def search_ams360_customer_by_name(self, name: str) -> str:
-        """Search for a customer in AMS360 by name.
+    async def get_ams360_policy_by_number(self, policy_number: str) -> str:
+        """Get policy information by policy number from AMS360.
         
         Args:
-            name: Customer name or name prefix to search for
+            policy_number: The policy number to search for
         
         Returns:
-            String message with search results or error
+            String message with policy information or error
         """
-        logger.info(f"🔧 Agent tool called: search_ams360_customer_by_name({name})")
+        logger.info(f"🔧 Agent tool called: get_ams360_policy_by_number({policy_number})")
         
         try:
-            result = self.ams360_service.search_customer_by_name(name)
+            from formating.full_policy import extract_policy_fields, extract_customer_fields
+            
+            result = self.ams360_service.get_policy_by_number(policy_number)
             if result:
-                return f"Found customer information in AMS360 for name '{name}'. Customer data retrieved successfully."
+                try:
+                    # Unpack the three return values: policy_details, customer_data, policy_list
+                    policy_details, customer_data, policy_list = result
+                    
+                    # Extract policy fields using the formatting function
+                    policy_info = extract_policy_fields(policy_details)
+                    
+                    # Format dates nicely
+                    def format_date(date_str):
+                        if date_str and 'T' in str(date_str):
+                            return date_str.split('T')[0]
+                        return date_str or 'N/A'
+                    
+                    # Build user-friendly message
+                    message = f"Found Policy in AMS360:\n\n"
+                    message += f"Policy Number: {policy_info.get('PolicyNumber', 'N/A')}\n"
+                    message += f"Effective Date: {format_date(policy_info.get('EffectiveDate'))}\n"
+                    message += f"Expiration Date: {format_date(policy_info.get('ExpirationDate'))}\n"
+                    message += f"Policy Type: {policy_info.get('PolicyTypeOfBusiness', 'N/A')}\n"
+                    message += f"Line of Business: {policy_info.get('LineDescription', 'N/A')}\n"
+                    message += f"Full Term Premium: ${policy_info.get('FullTermPremium', 'N/A')}\n"
+                    message += f"Bill Method: {policy_info.get('BillMethod', 'N/A')}\n"
+                    
+                    # Add latest transaction info if available
+                    if policy_info.get('LatestTransactionType'):
+                        message += f"\nLatest Transaction:\n"
+                        message += f"   Type: {policy_info.get('LatestTransactionType', 'N/A')}\n"
+                        message += f"   Date: {format_date(policy_info.get('LatestTransactionDate'))}\n"
+                        message += f"   Premium: ${policy_info.get('LatestPremium', 'N/A')}\n"
+                    
+                    # Add customer info if available
+                    if customer_data:
+                        try:
+                            customer_info = extract_customer_fields(customer_data)
+                            message += f"\nCustomer Information:\n"
+                            message += f"   Name: {customer_info.get('FirstName', '')} {customer_info.get('LastName', '')}\n"
+                            message += f"   Customer ID: {customer_info.get('CustomerId', 'N/A')}\n"
+                            
+                            # Add contact info if available
+                            if customer_info.get('Email'):
+                                message += f"   Email: {customer_info.get('Email')}\n"
+                            if customer_info.get('CellPhone'):
+                                message += f"   Phone: {customer_info.get('CellAreaCode', '')}{customer_info.get('CellPhone', '')}\n"
+                            if customer_info.get('City') and customer_info.get('State'):
+                                message += f"   Location: {customer_info.get('City')}, {customer_info.get('State')}\n"
+                        except Exception as e:
+                            logger.warning(f"Could not extract customer details: {e}")
+                    
+                    return message
+                    
+                except Exception as e:
+                    logger.warning(f"Error formatting policy details: {e}")
+                    return f"Found policy information in AMS360 for policy number {policy_number}."
             else:
-                return f"No customer found in AMS360 with name '{name}'."
+                return f"No policy found in AMS360 with policy number {policy_number}."
         except Exception as e:
-            logger.error(f"Error searching AMS360 by name: {e}")
-            return f"Error searching AMS360: {str(e)}"
+            logger.error(f"Error getting AMS360 policy by number: {e}")
+            return f"Error retrieving policy: {str(e)}"
     
-    @function_tool()
-    async def get_ams360_customer_policies(self, customer_id: str) -> str:
-        """Get all policies for a specific customer from AMS360.
-        
-        Args:
-            customer_id: The AMS360 customer ID to retrieve policies for
-        
-        Returns:
-            String message with policies information or error
-        """
-        logger.info(f"🔧 Agent tool called: get_ams360_customer_policies({customer_id})")
-        
-        try:
-            result = self.ams360_service.get_customer_policies(customer_id)
-            if result:
-                return f"Retrieved policies for customer {customer_id} from AMS360 successfully."
-            else:
-                return f"No policies found for customer {customer_id} in AMS360."
-        except Exception as e:
-            logger.error(f"Error getting AMS360 customer policies: {e}")
-            return f"Error retrieving policies: {str(e)}"
     
     # AgencyZoom Integration Tools
     @function_tool()
@@ -702,7 +779,7 @@ AVAILABLE TOOLS - Use these during the conversation:
    - submit_quote_request: Submit the collected insurance data for quote processing
 
 3. AMS360 POLICY LOOKUP (For Existing Customers):
-   - get_ams360_customer_policies: Retrieve all policies for a specific customer
+   - get_ams360_policy_by_number: Search for a policy by policy number and retrieve complete details
 
 4. AGENCYZOOM CRM INTEGRATION:
    - create_agencyzoom_lead: Create a new lead in AgencyZoom with customer details
@@ -729,10 +806,10 @@ WORKFLOW:
     logger.info("Telephony Agent Initialized")
     logger.info(f"Knowledge Base: Loaded ({len(INSHORA_KNOWLEDGE_BASE)} characters)")
     logger.info("Available Tools:")
-    logger.info("  - Insurance Data Collection (5 tools)")
-    logger.info("  - AMS360 Policy Lookup (3 tools)")
+    logger.info("  - Insurance Data Collection (7 tools)")
+    logger.info("  - AMS360 Policy Lookup (4 tools)")
     logger.info("  - AgencyZoom CRM Integration (5 tools)")
-    logger.info(f"Total Tools: 13")
+    logger.info(f"Total Tools: 16")
     logger.info(f"Instructions Length: {len(instructions)} characters")
     logger.info("=" * 60)
     
