@@ -898,5 +898,5 @@ if __name__ == "__main__":
     # Run the agent with the name that matches your dispatch rule
     cli.run_app(WorkerOptions(
         entrypoint_fnc=entrypoint,
-        agent_name=config.agent_name  # This must match your dispatch rule
+        agent_name="inshora-agent"  # This must match your dispatch rule
     ))
