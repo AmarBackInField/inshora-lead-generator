@@ -1,0 +1,34 @@
+# LiveKit AI Agent Framework
+livekit
+livekit-agents
+livekit-plugins-deepgram
+livekit-plugins-openai
+livekit-plugins-cartesia
+livekit-plugins-silero
+livekit-plugins-elevenlabs
+
+# RAG and Vector Database
+langchain
+langchain-openai
+qdrant-client
+
+# Data Processing
+pdfplumber
+pandas
+openpyxl
+beautifulsoup4
+requests
+xmltodict
+
+# Async Support
+aiohttp
+
+# Environment Variables
+python-dotenv
+
+# Email Validation
+pydantic[email]
+
+# Web API Framework (for chatbot endpoint)
+fastapi
+uvicorn[standard]

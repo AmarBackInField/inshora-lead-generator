@@ -1,0 +1,10 @@
+{
+    "trunk": {
+      "name": "testing1",
+      "numbers": ["+12625925656"],
+      "allowed_addresses": [],
+      "allowed_numbers": [],
+      "auth_username": "",
+      "auth_password": ""
+    }
+  }

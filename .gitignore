@@ -1,0 +1,144 @@
+# ===========================
+# Python
+# ===========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ===========================
+# Virtual Environments
+# ===========================
+venv/
+ENV/
+env/
+.venv/
+.env.local
+.env.development
+.env.test
+.env.production
+
+# ===========================
+# Environment Variables (IMPORTANT - Contains API Keys)
+# ===========================
+.env
+*.env
+.env.*
+!.env.example
+
+# ===========================
+# IDE / Editor
+# ===========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ===========================
+# Logs
+# ===========================
+*.log
+logs/
+api.log
+agent.log
+chatbot.log
+agent_debug.log
+
+# ===========================
+# Database
+# ===========================
+*.db
+*.sqlite
+*.sqlite3
+
+# ===========================
+# Config files with secrets
+# ===========================
+config.json
+secrets.json
+credentials.json
+
+# ===========================
+# Insurance Request Data (Sensitive Customer Data)
+# ===========================
+insurance_requests/
+transcripts/
+
+# ===========================
+# Jupyter Notebooks Checkpoints
+# ===========================
+.ipynb_checkpoints/
+
+# ===========================
+# Testing
+# ===========================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ===========================
+# MyPy / Type Checking
+# ===========================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ===========================
+# OS Generated Files
+# ===========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ===========================
+# Temporary Files
+# ===========================
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# ===========================
+# LiveKit / Voice Agent
+# ===========================
+*.wav
+*.mp3
+*.ogg
+recordings/
+
+# ===========================
+# Package Manager
+# ===========================
+node_modules/
+package-lock.json
+yarn.lock
+
