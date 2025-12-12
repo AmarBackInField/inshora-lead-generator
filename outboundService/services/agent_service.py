@@ -759,7 +759,7 @@ WORKFLOW:
             instructions = f"{instructions}\n\nESCALATION CONDITION: {escalation_condition}"
         
         
-        logger.info("✓ Dynamic configuration loaded successfully")
+        logger.info("Dynamic configuration loaded successfully")
         logger.info(f"  - Caller Name: {caller_name}")
         logger.info(f"  - TTS Language: {language}")
         logger.info(f"  - Voice ID: {voice_id}")
@@ -832,21 +832,26 @@ WORKFLOW:
     # --------------------------------------------------------
     # Track session start time for duration calculation
     session_start_time = None
+    # Variables to hold component references for cleanup
+    session = None
+    tts_instance = None
+    stt_instance = None
     
     async def cleanup_and_save():
         """
-        Non-blocking cleanup that runs in background.
-        This ensures participant disconnect doesn't block the server.
+        Background task to save transcript and perform non-critical cleanup.
+        Critical resource cleanup (session, audio) is done synchronously in cleanup_wrapper.
         """
+        nonlocal session, session_start_time
+        
         try:
-            logger.info("Cleanup started (non-blocking)...")
+            logger.info("Background cleanup started (transcript saving)...")
             
-            # session may not be defined if start() failed — guard it
-            if "session" in locals() and session is not None and hasattr(session, "history"):
-                transcript_data = session.history.to_dict()
-                
-                # Save to MongoDB in background (don't block disconnect)
+            # Save transcript if available
+            if session is not None and hasattr(session, "history"):
                 try:
+                    transcript_data = session.history.to_dict()
+                    
                     # Get caller information from dynamic config (use cached version)
                     logger.info("Saving transcript to MongoDB...")
                     dynamic_config = load_dynamic_config()
@@ -894,26 +899,72 @@ WORKFLOW:
             else:
                 logger.warning("No session history to save (session not created or no history).")
             
-            logger.info("Cleanup completed successfully")
+            logger.info("Background cleanup completed successfully")
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}", exc_info=True)
+            logger.error(f"Error during background cleanup: {e}", exc_info=True)
 
     # Wrap cleanup in background task to avoid blocking server on disconnect
     async def cleanup_wrapper():
-        """Non-blocking wrapper that schedules cleanup as background task"""
-        # Schedule cleanup in background without waiting for it
-        asyncio.create_task(cleanup_and_save())
-        logger.info("[OK] Cleanup task scheduled (non-blocking)")
-        # Return immediately - don't wait for cleanup to finish
+        """
+        Wrapper that performs critical cleanup synchronously and schedules rest in background.
+        This ensures audio resources are released before returning.
+        """
+        try:
+            # Step 1: Critical cleanup (audio resources) - do this synchronously
+            logger.info("Starting critical resource cleanup (synchronous)...")
+            
+            # Close session to release audio streams
+            if session is not None:
+                try:
+                    if hasattr(session, 'close'):
+                        await session.close()
+                    elif hasattr(session, 'aclose'):
+                        await session.aclose()
+                    logger.info("Session closed (critical)")
+                except Exception as e:
+                    logger.warning(f"Session close in wrapper: {e}")
+            
+            # Close audio components
+            if tts_instance is not None:
+                try:
+                    if hasattr(tts_instance, 'aclose'):
+                        await tts_instance.aclose()
+                    elif hasattr(tts_instance, 'close'):
+                        tts_instance.close()
+                    logger.info("TTS closed (critical)")
+                except Exception as e:
+                    logger.warning(f"TTS close in wrapper: {e}")
+            
+            if stt_instance is not None:
+                try:
+                    if hasattr(stt_instance, 'aclose'):
+                        await stt_instance.aclose()
+                    elif hasattr(stt_instance, 'close'):
+                        stt_instance.close()
+                    logger.info("STT closed (critical)")
+                except Exception as e:
+                    logger.warning(f"STT close in wrapper: {e}")
+            
+            logger.info("[OK] Critical resources released")
+            
+            # Step 2: Schedule non-critical cleanup (transcript saving) in background
+            asyncio.create_task(cleanup_and_save())
+            logger.info("[OK] Non-critical cleanup task scheduled (background)")
+        except Exception as e:
+            logger.error(f"Error in cleanup wrapper: {e}", exc_info=True)
     
     ctx.add_shutdown_callback(cleanup_wrapper)
-    logger.info("[OK] Shutdown callback added (non-blocking)")
+    logger.info("[OK] Shutdown callback added (hybrid sync/async)")
 
     # --------------------------------------------------------
     # Initialize core components
     # --------------------------------------------------------
     try:
         logger.info("Initializing session components...")
+        
+        # Add small delay to ensure previous call cleanup is complete
+        logger.info("Waiting for any previous cleanup to complete...")
+        await asyncio.sleep(0.5)
 
         logger.info("Step 1: Initializing STT (Deepgram)")
         stt_instance = deepgram.STT(model=STT_MODEL, language=STT_LANGUAGE)
@@ -971,7 +1022,7 @@ WORKFLOW:
             )
             logger.info("[OK] OpenAI TTS initialized as fallback")
 
-        logger.info("Step 4: Creating AgentSession")
+        logger.info("Step 4: Creating AgentSession with fresh components")
         session = AgentSession(vad=silero.VAD.load(),stt=stt_instance, llm=llm_instance, tts=tts_instance)
         logger.info("[OK] All session components initialized")
     except Exception as e:
