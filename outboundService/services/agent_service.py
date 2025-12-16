@@ -257,7 +257,8 @@ class Assistant(Agent):
     @function_tool()
     async def collect_home_insurance_data(
         self,
-        full_name: str,
+        first_name: str,
+        last_name: str,
         date_of_birth: str,
         phone: str,
         street_address: str,
@@ -267,7 +268,8 @@ class Assistant(Agent):
         zip_code: str,
         email: str,
         current_provider: str = None,
-        spouse_name: str = None,
+        spouse_first_name: str = None,
+        spouse_last_name: str = None,
         spouse_dob: str = None,
         has_solar_panels: bool = False,
         has_pool: bool = False,
@@ -278,7 +280,8 @@ class Assistant(Agent):
     ) -> str:
         """Collect home insurance information from the caller.
         Args:
-            full_name: Full name of primary insured
+            first_name: First name of primary insured
+            last_name: Last name of primary insured
             date_of_birth: Date of birth (YYYY-MM-DD format)
             phone: Phone number
             street_address: Street address
@@ -288,7 +291,8 @@ class Assistant(Agent):
             zip_code: ZIP or postal code
             email: Email address
             current_provider: Current insurance provider (optional)
-            spouse_name: Spouse name (optional)
+            spouse_first_name: Spouse first name (optional)
+            spouse_last_name: Spouse last name (optional)
             spouse_dob: Spouse date of birth (optional, YYYY-MM-DD format)
             has_solar_panels: Whether property has solar panels
             has_pool: Whether property has a pool
@@ -297,7 +301,10 @@ class Assistant(Agent):
             renewal_date: Current policy renewal date (optional, YYYY-MM-DD format)
             renewal_premium: Current renewal premium amount (optional)
         """
-        logger.info(f"🔧 Agent tool called: collect_home_insurance_data({full_name})")
+        logger.info(f"🔧 Agent tool called: collect_home_insurance_data({first_name} {last_name})")
+        # Combine first and last name for internal storage
+        full_name = f"{first_name} {last_name}".strip()
+        spouse_name = f"{spouse_first_name} {spouse_last_name}".strip() if spouse_first_name and spouse_last_name else None
         return self.insurance_service.collect_home_insurance(
             full_name=full_name,
             date_of_birth=date_of_birth,
@@ -322,7 +329,8 @@ class Assistant(Agent):
     @function_tool()
     async def collect_auto_insurance_data(
         self,
-        driver_name: str,
+        driver_first_name: str,
+        driver_last_name: str,
         driver_dob: str,
         phone: str,
         license_number: str,
@@ -340,7 +348,8 @@ class Assistant(Agent):
     ) -> str:
         """Collect auto insurance information from the caller.
         Args:
-            driver_name: Full name of driver
+            driver_first_name: Driver's first name
+            driver_last_name: Driver's last name
             driver_dob: Driver date of birth (YYYY-MM-DD format)
             phone: Phone number
             license_number: Driver's license number
@@ -356,7 +365,9 @@ class Assistant(Agent):
             renewal_date: Current policy renewal date (optional, YYYY-MM-DD format)
             renewal_premium: Current renewal premium amount (optional)
         """
-        logger.info(f"🔧 Agent tool called: collect_auto_insurance_data({driver_name})")
+        logger.info(f"🔧 Agent tool called: collect_auto_insurance_data({driver_first_name} {driver_last_name})")
+        # Combine first and last name for internal storage
+        driver_name = f"{driver_first_name} {driver_last_name}".strip()
         return self.insurance_service.collect_auto_insurance(
             driver_name=driver_name,
             driver_dob=driver_dob,
@@ -378,7 +389,8 @@ class Assistant(Agent):
     @function_tool()
     async def collect_flood_insurance_data(
         self, 
-        full_name: str, 
+        first_name: str,
+        last_name: str,
         email: str,
         phone: str,
         street_address: str,
@@ -389,7 +401,8 @@ class Assistant(Agent):
     ) -> str:
         """Collect flood insurance information from the caller.
         Args:
-            full_name: Full name of insured
+            first_name: First name of insured
+            last_name: Last name of insured
             email: Email address
             phone: Phone number
             street_address: Street address
@@ -398,7 +411,9 @@ class Assistant(Agent):
             country: Country
             zip_code: ZIP or postal code
         """
-        logger.info(f"🔧 Agent tool called: collect_flood_insurance_data({full_name})")
+        logger.info(f"🔧 Agent tool called: collect_flood_insurance_data({first_name} {last_name})")
+        # Combine first and last name for internal storage
+        full_name = f"{first_name} {last_name}".strip()
         return self.insurance_service.collect_flood_insurance(
             full_name=full_name,
             email=email,
@@ -413,7 +428,8 @@ class Assistant(Agent):
     @function_tool()
     async def collect_life_insurance_data(
         self,
-        full_name: str,
+        first_name: str,
+        last_name: str,
         date_of_birth: str,
         phone: str,
         street_address: str,
@@ -428,7 +444,8 @@ class Assistant(Agent):
     ) -> str:
         """Collect life insurance information from the caller.
         Args:
-            full_name: Full name of insured
+            first_name: First name of insured
+            last_name: Last name of insured
             date_of_birth: Date of birth (YYYY-MM-DD format)
             phone: Phone number
             street_address: Street address
@@ -441,7 +458,9 @@ class Assistant(Agent):
             appointment_date: Requested appointment date and time (optional, YYYY-MM-DD HH:MM format)
             policy_type: Type of policy - "term", "whole", "universal", "annuity", or "long_term_care" (optional)
         """
-        logger.info(f"🔧 Agent tool called: collect_life_insurance_data({full_name})")
+        logger.info(f"🔧 Agent tool called: collect_life_insurance_data({first_name} {last_name})")
+        # Combine first and last name for internal storage
+        full_name = f"{first_name} {last_name}".strip()
         return self.insurance_service.collect_life_insurance(
             full_name=full_name,
             date_of_birth=date_of_birth,
@@ -832,11 +851,11 @@ AVAILABLE TOOLS - Use these during the conversation:
 
 2. INSURANCE DATA COLLECTION:
    - set_user_action: FIRST call this to set action type ("add" or "update") and insurance type ("home", "auto", "flood", "life", "commercial")
-   - collect_home_insurance_data: Collect home insurance details (name, birthday, phone, streetAddress, city, state, country, zip_code, email, current provider)
-   - collect_auto_insurance_data: Collect auto insurance details (name, birthday, phone, license, VIN, vehicle make/model, coverage type)
-   - collect_flood_insurance_data: Collect flood insurance details (name, email, phone, streetAddress, city, state, country, zip_code)
-   - collect_life_insurance_data: Collect life insurance details (name, birthday, phone, streetAddress, city, state, country, zip_code)
-   - collect_commercial_insurance_data: Collect commercial insurance details (name, phone, streetAddress, city, state, country, zip_code, inventory limit, building coverage)
+   - collect_home_insurance_data: Collect home insurance details (first_name, last_name, birthday, phone, street_address, city, state, country, zip_code, email, current provider)
+   - collect_auto_insurance_data: Collect auto insurance details (driver_first_name, driver_last_name, birthday, phone, license, VIN, vehicle make/model, coverage type)
+   - collect_flood_insurance_data: Collect flood insurance details (first_name, last_name, email, phone, street_address, city, state, country, zip_code)
+   - collect_life_insurance_data: Collect life insurance details (first_name, last_name, birthday, phone, street_address, city, state, country, zip_code)
+   - collect_commercial_insurance_data: Collect commercial insurance details (business name, phone, street_address, city, state, country, zip_code, inventory limit, building coverage)
    - submit_quote_request: Submit the collected insurance data for quote processing
 
 3. CRM INTEGRATION:
@@ -847,9 +866,15 @@ WORKFLOW:
 1. Greet the caller and identify their insurance needs
 2. Call set_user_action with the appropriate action and insurance type
 3. Use the relevant collect_*_insurance_data tool to gather information
-4. Call submit_quote_request to process the quote
-5. Call submit_collected_data_to_agencyzoom to save lead to CRM
-6. If caller requests human assistance or meets escalation condition, use transfer_to_human"""
+4. BEFORE calling submit_quote_request, say: "Let me submit your request for you. This will just take a moment."
+5. Call submit_quote_request to process the quote
+6. IMMEDIATELY AFTER submit_quote_request succeeds, ALWAYS call submit_collected_data_to_agencyzoom to save the lead to AgencyZoom CRM
+7. Confirm to the user that their information has been submitted
+8. If caller requests human assistance or meets escalation condition, use transfer_to_human
+
+CRITICAL: You MUST call BOTH submit_quote_request AND submit_collected_data_to_agencyzoom for every quote. The quote is only saved locally until you call submit_collected_data_to_agencyzoom to send it to AgencyZoom.
+
+IMPORTANT: Always inform the user before submitting their information. Say something like "Give me a second while I submit your request" or "Let me process that for you right away" before calling submission tools."""
         
         # Add escalation condition if provided
         if escalation_condition:
@@ -898,11 +923,11 @@ AVAILABLE TOOLS - Use these during the conversation:
 
 2. INSURANCE DATA COLLECTION:
    - set_user_action: FIRST call this to set action type ("add" or "update") and insurance type ("home", "auto", "flood", "life", "commercial")
-   - collect_home_insurance_data: Collect home insurance details (name, birthday, phone, streetAddress, city, state, country, zip_code, email, current provider)
-   - collect_auto_insurance_data: Collect auto insurance details (name, birthday, phone, license, VIN, vehicle make/model, coverage type)
-   - collect_flood_insurance_data: Collect flood insurance details (name, email, phone, streetAddress, city, state, country, zip_code)
-   - collect_life_insurance_data: Collect life insurance details (name, birthday, phone, streetAddress, city, state, country, zip_code)
-   - collect_commercial_insurance_data: Collect commercial insurance details (name, phone, streetAddress, city, state, country, zip_code, inventory limit, building coverage)
+   - collect_home_insurance_data: Collect home insurance details (first_name, last_name, birthday, phone, street_address, city, state, country, zip_code, email, current provider)
+   - collect_auto_insurance_data: Collect auto insurance details (driver_first_name, driver_last_name, birthday, phone, license, VIN, vehicle make/model, coverage type)
+   - collect_flood_insurance_data: Collect flood insurance details (first_name, last_name, email, phone, street_address, city, state, country, zip_code)
+   - collect_life_insurance_data: Collect life insurance details (first_name, last_name, birthday, phone, street_address, city, state, country, zip_code)
+   - collect_commercial_insurance_data: Collect commercial insurance details (business name, phone, street_address, city, state, country, zip_code, inventory limit, building coverage)
    - submit_quote_request: Submit the collected insurance data for quote processing
 
 3. CRM INTEGRATION:
@@ -913,9 +938,12 @@ WORKFLOW:
 1. Greet the caller and identify their insurance needs
 2. Call set_user_action with the appropriate action and insurance type
 3. Use the relevant collect_*_insurance_data tool to gather information
-4. Call submit_quote_request to process the quote
-5. Call submit_collected_data_to_agencyzoom to save lead to CRM
-6. If caller requests human assistance, use transfer_to_human"""
+4. BEFORE calling submit_quote_request or submit_collected_data_to_agencyzoom, say: "Let me submit your request for you. This will just take a moment."
+5. Call submit_quote_request to process the quote
+6. Call submit_collected_data_to_agencyzoom to save lead to CRM
+7. If caller requests human assistance, use transfer_to_human
+
+IMPORTANT: Always inform the user before submitting their information. Say something like "Give me a second while I submit your request" or "Let me process that for you right away" before calling any submission tools."""
         language = "en"
         voice_id = "21m00Tcm4TlvDq8ikWAM"
         provider = "openai"
@@ -1140,12 +1168,12 @@ WORKFLOW:
                 api_key=os.getenv("OPENAI_API_KEY"),
                 voice="alloy",
                 model="gpt-4o-realtime-preview-2024-12-17",
-                temperature=0.6,
+                temperature=0.8,
                 turn_detection=TurnDetection(
                     type="server_vad",
-                    silence_duration_ms=1200,  # Increased from 900 - less sensitive to brief pauses
-                    prefix_padding_ms=800,     # Increased from 500 - captures more context before interruption
-                    threshold=0.86,
+                    silence_duration_ms=800,  # Reduced for lower latency - more responsive
+                    prefix_padding_ms=300,     # Reduced for lower latency
+                    threshold=0.5,  # Lower threshold for more responsive detection
                 ),
                 max_session_duration=1800,
             )

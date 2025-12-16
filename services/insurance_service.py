@@ -642,7 +642,7 @@ class InsuranceService:
             # Note: CRM submission happens via submit_collected_data_to_agencyzoom()
             # if agencyzoom_submitted:
             #     response_msg += " Your information has been automatically added to our CRM system."
-            response_msg += " Our team will review your information and contact you shortly with a personalized quote. Is there anything else I can help you with today?"
+            response_msg += " IMPORTANT: You must now call submit_collected_data_to_agencyzoom() to save this lead to AgencyZoom CRM. The quote is only saved locally until you complete CRM submission."
             
             return response_msg
             
