@@ -40,6 +40,14 @@ class UpdateType(str, Enum):
 # SHARED/COMMON MODELS
 # ===========================
 
+class Address(BaseModel):
+    streetAddress: str = Field(..., description="Street address")
+    city: str = Field(..., description="City")
+    state: str = Field(..., description="State")
+    country: str = Field(..., description="Country")
+    zip_code: str = Field(..., description="ZIP or postal code")
+
+
 class ContactInfo(BaseModel):
     phone: str = Field(..., description="Best phone number to reach")
     email: EmailStr = Field(..., description="Email address")
@@ -61,10 +69,10 @@ class PolicyInfo(BaseModel):
 # ===========================
 
 class PropertyDetails(BaseModel):
-    address: str = Field(..., description="Full property address")
-    has_solar_panels: bool = Field(..., description="Does property have solar panels?")
-    has_pool: bool = Field(..., description="Does property have a pool?")
-    roof_age: int = Field(..., ge=0, description="Age of roof in years")
+    address: Address = Field(..., description="Property address")
+    has_solar_panels: bool = Field(False, description="Does property have solar panels?")
+    has_pool: bool = Field(False, description="Does property have a pool?")
+    roof_age: int = Field(0, ge=0, description="Age of roof in years")
 
 
 class HomeInsurance(BaseModel):
@@ -98,7 +106,13 @@ class HomeInsurance(BaseModel):
                     "date_of_birth": "1982-08-20"
                 },
                 "property": {
-                    "address": "123 Main St, Anytown, ST 12345",
+                    "address": {
+                        "streetAddress": "123 Main St",
+                        "city": "Anytown",
+                        "state": "ST",
+                        "country": "USA",
+                        "zip_code": "12345"
+                    },
                     "has_solar_panels": True,
                     "has_pool": False,
                     "roof_age": 5
@@ -198,15 +212,23 @@ class AutoInsurance(BaseModel):
 # ===========================
 
 class FloodInsurance(BaseModel):
-    home_address: str = Field(..., description="Home address for flood insurance")
+    home_address: Address = Field(..., description="Home address for flood insurance")
     full_name: str = Field(..., description="Full name of insured")
+    phone: str = Field(..., description="Phone number")
     email: EmailStr = Field(..., description="Email address")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "home_address": "456 River Rd, Floodville, ST 54321",
+                "home_address": {
+                    "streetAddress": "456 River Rd",
+                    "city": "Floodville",
+                    "state": "ST",
+                    "country": "USA",
+                    "zip_code": "54321"
+                },
                 "full_name": "Jane Smith",
+                "phone": "555-123-4567",
                 "email": "jane.smith@example.com"
             }
         }
@@ -218,6 +240,7 @@ class FloodInsurance(BaseModel):
 
 class LifeInsurance(BaseModel):
     insured: Person = Field(..., description="Insured person")
+    address: Address = Field(..., description="Insured person's address")
     appointment_requested: bool = Field(..., description="Is appointment requested?")
     appointment_date: Optional[datetime] = Field(None, description="Appointment date and time")
     contact: ContactInfo = Field(..., description="Contact information")
@@ -229,6 +252,13 @@ class LifeInsurance(BaseModel):
                 "insured": {
                     "full_name": "Robert Johnson",
                     "date_of_birth": "1975-03-10"
+                },
+                "address": {
+                    "streetAddress": "789 Oak Ave",
+                    "city": "Springfield",
+                    "state": "IL",
+                    "country": "USA",
+                    "zip_code": "62701"
                 },
                 "appointment_requested": True,
                 "appointment_date": "2025-12-01T10:00:00",
@@ -248,7 +278,7 @@ class LifeInsurance(BaseModel):
 class BusinessDetails(BaseModel):
     name: str = Field(..., description="Business legal name")
     type: str = Field(..., description="Type of business")
-    address: str = Field(..., description="Business address")
+    address: Address = Field(..., description="Business address")
 
 
 class CoverageDetails(BaseModel):
@@ -282,7 +312,13 @@ class CommercialInsurance(BaseModel):
                 "business": {
                     "name": "ABC Corporation",
                     "type": "Retail Store",
-                    "address": "789 Business Blvd, Commerce City, ST 67890"
+                    "address": {
+                        "streetAddress": "789 Business Blvd",
+                        "city": "Commerce City",
+                        "state": "ST",
+                        "country": "USA",
+                        "zip_code": "67890"
+                    }
                 },
                 "coverage": {
                     "inventory_limit": 500000.00,

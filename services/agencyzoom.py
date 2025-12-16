@@ -159,22 +159,22 @@ class AgencyZoomService:
             if field in lead_data and lead_data[field] is not None:
                 payload[field] = lead_data[field]
         
-        # Handle custom fields - only add fields that are NOT standard AgencyZoom fields
-        standard_fields = {
-            "firstname", "lastname", "first_name", "last_name", "email", "phone",
-            "pipelineId", "stageId", "leadSourceId", "assignTo", *optional_fields
-        }
+        # # Handle custom fields - only add fields that are NOT standard AgencyZoom fields
+        # standard_fields = {
+        #     "firstname", "lastname", "first_name", "last_name", "email", "phone",
+        #     "pipelineId", "stageId", "leadSourceId", "assignTo", *optional_fields
+        # }
         
-        custom_fields = []
-        for field, value in lead_data.items():
-            if field not in standard_fields and value is not None:
-                custom_fields.append({
-                    "fieldName": field,
-                    "fieldValue": [str(value)] if not isinstance(value, list) else value
-                })
+        # custom_fields = []
+        # for field, value in lead_data.items():
+        #     if field not in standard_fields and value is not None:
+        #         custom_fields.append({
+        #             "fieldName": field,
+        #             "fieldValue": [str(value)] if not isinstance(value, list) else value
+        #         })
         
-        if custom_fields:
-            payload["customFields"] = custom_fields
+        # if custom_fields:
+        #     payload["customFields"] = custom_fields
         
         try:
             logger.info(f"AgencyZoom lead payload: {payload}")

@@ -4,6 +4,8 @@ import logging
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+from livekit.plugins.openai.realtime.realtime_model import TurnDetection
+
 
 from livekit.agents import (
     Agent,
@@ -97,16 +99,20 @@ class TelephonyAgent(Agent):
         self,
         full_name: str,
         date_of_birth: str,
-        property_address: str,
         phone: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str,
         email: str,
+        current_provider: str = None,
         spouse_name: str = None,
         spouse_dob: str = None,
         has_solar_panels: bool = False,
         has_pool: bool = False,
         roof_age: int = 0,
         has_pets: bool = False,
-        current_provider: str = None,
         renewal_date: str = None,
         renewal_premium: float = None
     ) -> str:
@@ -114,16 +120,20 @@ class TelephonyAgent(Agent):
         Args:
             full_name: Full name of primary insured
             date_of_birth: Date of birth (YYYY-MM-DD format)
-            property_address: Property address
             phone: Phone number
+            street_address: Street address
+            city: City
+            state: State
+            country: Country
+            zip_code: ZIP or postal code
             email: Email address
+            current_provider: Current insurance provider (optional)
             spouse_name: Spouse name (optional)
             spouse_dob: Spouse date of birth (optional, YYYY-MM-DD format)
             has_solar_panels: Whether property has solar panels
             has_pool: Whether property has a pool
             roof_age: Age of roof in years
             has_pets: Whether household has pets
-            current_provider: Current insurance provider (optional)
             renewal_date: Current policy renewal date (optional, YYYY-MM-DD format)
             renewal_premium: Current renewal premium amount (optional)
         """
@@ -131,18 +141,22 @@ class TelephonyAgent(Agent):
         return self.insurance_service.collect_home_insurance(
             full_name=full_name,
             date_of_birth=date_of_birth,
+            phone=phone,
+            street_address=street_address,
+            city=city,
+            state=state,
+            country=country,
+            zip_code=zip_code,
+            email=email,
+            current_provider=current_provider,
             spouse_name=spouse_name,
             spouse_dob=spouse_dob,
-            property_address=property_address,
             has_solar_panels=has_solar_panels,
             has_pool=has_pool,
             roof_age=roof_age,
             has_pets=has_pets,
-            current_provider=current_provider,
             renewal_date=renewal_date,
-            renewal_premium=renewal_premium,
-            phone=phone,
-            email=email
+            renewal_premium=renewal_premium
         )
     
     @function_tool()
@@ -150,16 +164,16 @@ class TelephonyAgent(Agent):
         self,
         driver_name: str,
         driver_dob: str,
+        phone: str,
         license_number: str,
-        qualification: str,
-        profession: str,
         vin: str,
         vehicle_make: str,
         vehicle_model: str,
-        phone: str,
-        email: str,
-        gpa: float = None,
         coverage_type: str = "full",
+        email: str = "",
+        qualification: str = "Unknown",
+        profession: str = "Unknown",
+        gpa: float = None,
         current_provider: str = None,
         renewal_date: str = None,
         renewal_premium: float = None
@@ -168,16 +182,16 @@ class TelephonyAgent(Agent):
         Args:
             driver_name: Full name of driver
             driver_dob: Driver date of birth (YYYY-MM-DD format)
+            phone: Phone number
             license_number: Driver's license number
-            qualification: Driver qualification
-            profession: Driver profession
             vin: Vehicle VIN (17 characters)
             vehicle_make: Vehicle make
             vehicle_model: Vehicle model
-            phone: Phone number
-            email: Email address
-            gpa: GPA if driver under 21 (optional)
             coverage_type: Coverage type - "liability" or "full"
+            email: Email address (optional)
+            qualification: Driver qualification (optional)
+            profession: Driver profession (optional)
+            gpa: GPA if driver under 21 (optional)
             current_provider: Current insurance provider (optional)
             renewal_date: Current policy renewal date (optional, YYYY-MM-DD format)
             renewal_premium: Current renewal premium amount (optional)
@@ -186,40 +200,69 @@ class TelephonyAgent(Agent):
         return self.insurance_service.collect_auto_insurance(
             driver_name=driver_name,
             driver_dob=driver_dob,
+            phone=phone,
             license_number=license_number,
-            qualification=qualification,
-            profession=profession,
-            gpa=gpa,
             vin=vin,
             vehicle_make=vehicle_make,
             vehicle_model=vehicle_model,
             coverage_type=coverage_type,
+            email=email,
+            qualification=qualification,
+            profession=profession,
+            gpa=gpa,
             current_provider=current_provider,
             renewal_date=renewal_date,
-            renewal_premium=renewal_premium,
-            phone=phone,
-            email=email
+            renewal_premium=renewal_premium
         )
     
     @function_tool()
-    async def collect_flood_insurance_data(self, full_name: str, home_address: str, email: str) -> str:
+    async def collect_flood_insurance_data(
+        self, 
+        full_name: str, 
+        email: str,
+        phone: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str
+    ) -> str:
         """Collect flood insurance information from the caller.
         Args:
             full_name: Full name of insured
-            home_address: Home address for flood insurance
             email: Email address
+            phone: Phone number
+            street_address: Street address
+            city: City
+            state: State
+            country: Country
+            zip_code: ZIP or postal code
         """
         logger.info(f"🔧 Agent tool called: collect_flood_insurance_data({full_name})")
-        return self.insurance_service.collect_flood_insurance(full_name, home_address, email)
+        return self.insurance_service.collect_flood_insurance(
+            full_name=full_name,
+            email=email,
+            phone=phone,
+            street_address=street_address,
+            city=city,
+            state=state,
+            country=country,
+            zip_code=zip_code
+        )
     
     @function_tool()
     async def collect_life_insurance_data(
         self,
         full_name: str,
         date_of_birth: str,
-        appointment_requested: bool,
         phone: str,
-        email: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str,
+        email: str = "",
+        appointment_requested: bool = False,
         appointment_date: str = None,
         policy_type: str = None
     ) -> str:
@@ -227,9 +270,14 @@ class TelephonyAgent(Agent):
         Args:
             full_name: Full name of insured
             date_of_birth: Date of birth (YYYY-MM-DD format)
-            appointment_requested: Whether customer wants an appointment
             phone: Phone number
-            email: Email address
+            street_address: Street address
+            city: City
+            state: State
+            country: Country
+            zip_code: ZIP or postal code
+            email: Email address (optional)
+            appointment_requested: Whether customer wants an appointment
             appointment_date: Requested appointment date and time (optional, YYYY-MM-DD HH:MM format)
             policy_type: Type of policy - "term", "whole", "universal", "annuity", or "long_term_care" (optional)
         """
@@ -237,10 +285,15 @@ class TelephonyAgent(Agent):
         return self.insurance_service.collect_life_insurance(
             full_name=full_name,
             date_of_birth=date_of_birth,
+            phone=phone,
+            street_address=street_address,
+            city=city,
+            state=state,
+            country=country,
+            zip_code=zip_code,
+            email=email,
             appointment_requested=appointment_requested,
             appointment_date=appointment_date,
-            phone=phone,
-            email=email,
             policy_type=policy_type
         )
     
@@ -248,10 +301,14 @@ class TelephonyAgent(Agent):
     async def collect_commercial_insurance_data(
         self,
         business_name: str,
-        business_type: str,
-        business_address: str,
         phone: str,
-        email: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str,
+        business_type: str = "General",
+        email: str = "",
         inventory_limit: float = None,
         building_coverage: bool = False,
         building_coverage_limit: float = None,
@@ -262,10 +319,14 @@ class TelephonyAgent(Agent):
         """Collect commercial insurance information from the caller.
         Args:
             business_name: Name of the business
-            business_type: Type of business
-            business_address: Business address
             phone: Phone number
-            email: Email address
+            street_address: Street address
+            city: City
+            state: State
+            country: Country
+            zip_code: ZIP or postal code
+            business_type: Type of business
+            email: Email address (optional)
             inventory_limit: Inventory coverage limit (optional)
             building_coverage: Whether building coverage is needed
             building_coverage_limit: Building coverage limit (optional)
@@ -276,16 +337,20 @@ class TelephonyAgent(Agent):
         logger.info(f"🔧 Agent tool called: collect_commercial_insurance_data({business_name})")
         return self.insurance_service.collect_commercial_insurance(
             business_name=business_name,
+            phone=phone,
+            street_address=street_address,
+            city=city,
+            state=state,
+            country=country,
+            zip_code=zip_code,
             business_type=business_type,
-            business_address=business_address,
+            email=email,
             inventory_limit=inventory_limit,
             building_coverage=building_coverage,
             building_coverage_limit=building_coverage_limit,
             current_provider=current_provider,
             renewal_date=renewal_date,
-            renewal_premium=renewal_premium,
-            phone=phone,
-            email=email
+            renewal_premium=renewal_premium
         )
     
     @function_tool()
@@ -447,9 +512,13 @@ class TelephonyAgent(Agent):
         email: str, 
         phone: str, 
         insurance_type: str,
+        streetAddress: str = "",
+        city: str = "",
+        state: str = "",
+        country: str = "",
+        zip_code: str = "",
         notes: str = "",
-        address: str = "",
-        date_of_birth: str = "",
+        birthday: str = "",
         current_provider: str = "",
         vehicle_info: str = "",
         property_info: str = "",
@@ -464,9 +533,13 @@ class TelephonyAgent(Agent):
             email: Lead's email address
             phone: Lead's phone number
             insurance_type: Type of insurance interested in (home, auto, flood, life, commercial)
+            streetAddress: Street address (optional)
+            city: City (optional)
+            state: State (optional)
+            country: Country (optional)
+            zip_code: ZIP or postal code (optional)
             notes: Additional notes about the lead (optional)
-            address: Home or business address (optional)
-            date_of_birth: Date of birth for life/personal insurance (optional)
+            birthday: Date of birth for life/personal insurance (optional)
             current_provider: Current insurance provider name (optional)
             vehicle_info: Vehicle details for auto insurance (optional)
             property_info: Property details for home insurance (optional)
@@ -488,11 +561,15 @@ class TelephonyAgent(Agent):
             "source": "AI Phone Call"
         }
         
+        # Build full address if components provided
+        address_parts = [streetAddress, city, state, zip_code, country]
+        full_address = ", ".join([part for part in address_parts if part])
+        if full_address:
+            lead_data["address"] = full_address
+            
         # Add optional fields if provided
-        if address:
-            lead_data["address"] = address
-        if date_of_birth:
-            lead_data["date_of_birth"] = date_of_birth
+        if birthday:
+            lead_data["date_of_birth"] = birthday
         if current_provider:
             lead_data["current_provider"] = current_provider
         if vehicle_info:
@@ -683,7 +760,12 @@ class TelephonyAgent(Agent):
             
             # Add insurance-type specific fields to top level for easy access
             if insurance_type == "home":
-                lead_data["property_address"] = insurance_data.get("property", {}).get("address", "")
+                property_addr = insurance_data.get("property", {}).get("address", {})
+                lead_data["streetAddress"] = property_addr.get('streetAddress', '')
+                lead_data["city"] = property_addr.get('city', '')
+                lead_data["state"] = property_addr.get('state', '')
+                lead_data["country"] = property_addr.get('country', '')
+                lead_data["zip"] = property_addr.get('zip_code', '')
                 lead_data["has_pool"] = insurance_data.get("property", {}).get("has_pool", False)
                 lead_data["has_solar_panels"] = insurance_data.get("property", {}).get("has_solar_panels", False)
                 lead_data["roof_age"] = insurance_data.get("property", {}).get("roof_age", 0)
@@ -704,9 +786,20 @@ class TelephonyAgent(Agent):
                 lead_data["current_provider"] = insurance_data.get("current_policy", {}).get("current_provider", "")
                 
             elif insurance_type == "flood":
-                lead_data["home_address"] = insurance_data.get("home_address", "")
+                home_addr = insurance_data.get("home_address", {})
+                lead_data["streetAddress"] = home_addr.get('streetAddress', '')
+                lead_data["city"] = home_addr.get('city', '')
+                lead_data["state"] = home_addr.get('state', '')
+                lead_data["country"] = home_addr.get('country', '')
+                lead_data["zip"] = home_addr.get('zip_code', '')
                 
             elif insurance_type == "life":
+                life_addr = insurance_data.get("address", {})
+                lead_data["streetAddress"] = life_addr.get('streetAddress', '')
+                lead_data["city"] = life_addr.get('city', '')
+                lead_data["state"] = life_addr.get('state', '')
+                lead_data["country"] = life_addr.get('country', '')
+                lead_data["zip"] = life_addr.get('zip_code', '')
                 lead_data["appointment_requested"] = insurance_data.get("appointment_requested", False)
                 lead_data["appointment_date"] = insurance_data.get("appointment_date", "")
                 lead_data["policy_type"] = insurance_data.get("policy_type", "")
@@ -715,7 +808,12 @@ class TelephonyAgent(Agent):
             elif insurance_type == "commercial":
                 lead_data["business_name"] = insurance_data.get("business", {}).get("name", "")
                 lead_data["business_type"] = insurance_data.get("business", {}).get("type", "")
-                lead_data["business_address"] = insurance_data.get("business", {}).get("address", "")
+                business_addr = insurance_data.get("business", {}).get("address", {})
+                lead_data["streetAddress"] = business_addr.get('streetAddress', '')
+                lead_data["city"] = business_addr.get('city', '')
+                lead_data["state"] = business_addr.get('state', '')
+                lead_data["country"] = business_addr.get('country', '')
+                lead_data["zip"] = business_addr.get('zip_code', '')
                 lead_data["inventory_limit"] = insurance_data.get("coverage", {}).get("inventory_limit", "")
                 lead_data["building_coverage"] = insurance_data.get("coverage", {}).get("building_coverage", False)
                 lead_data["current_provider"] = insurance_data.get("current_policy", {}).get("current_provider", "")
@@ -771,11 +869,11 @@ AVAILABLE TOOLS - Use these during the conversation:
 
 2. INSURANCE DATA COLLECTION:
    - set_user_action: FIRST call this to set action type ("add" or "update") and insurance type ("home", "auto", "flood", "life", "commercial")
-   - collect_home_insurance_data: Collect home insurance details (name, DOB, address, phone, email, solar panels, pool, roof age, pets, current provider)
-   - collect_auto_insurance_data: Collect auto insurance details (driver info, license, VIN, vehicle make/model, coverage type)
-   - collect_flood_insurance_data: Collect flood insurance details (name, address, email)
-   - collect_life_insurance_data: Collect life insurance details (name, DOB, appointment request, policy type)
-   - collect_commercial_insurance_data: Collect commercial insurance details (business name, type, address, inventory limit, building coverage)
+   - collect_home_insurance_data: Collect home insurance details (name, birthday, phone, street_address, city, state, country, zip_code, email, current provider)
+   - collect_auto_insurance_data: Collect auto insurance details (name, birthday, phone, license, VIN, vehicle make/model, coverage type)
+   - collect_flood_insurance_data: Collect flood insurance details (name, email, phone, street_address, city, state, country, zip_code)
+   - collect_life_insurance_data: Collect life insurance details (name, birthday, phone, street_address, city, state, country, zip_code)
+   - collect_commercial_insurance_data: Collect commercial insurance details (name, phone, street_address, city, state, country, zip_code, inventory limit, building coverage)
    - submit_quote_request: Submit the collected insurance data for quote processing
 
 3. AMS360 POLICY LOOKUP (For Existing Customers):
@@ -816,25 +914,38 @@ WORKFLOW:
     # Configure the voice processing pipeline optimized for telephony
     session = AgentSession(
         # Voice Activity Detection
-        vad=silero.VAD.load(),
+        # vad=silero.VAD.load(),
+        # Create the realtime model
+        llm = openai.realtime.RealtimeModel(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            voice="alloy",
+            model="gpt-realtime",
+            temperature=0.6,
+            turn_detection=TurnDetection(
+                type="server_vad",
+                silence_duration_ms=1200,  # Increased from 900 - less sensitive to brief pauses
+                prefix_padding_ms=800,     # Increased from 500 - captures more context before interruption
+                threshold=0.86,
+            ),
+            max_session_duration=1800,
+        ))
+        # # Speech-to-Text - Deepgram Nova-3
+        # stt=deepgram.STT(
+        #     model=config.stt.model,
+        #     language=config.stt.language,
+        #     interim_results=config.stt.interim_results,
+        #     punctuate=config.stt.punctuate,
+        #     smart_format=config.stt.smart_format,
+        #     filler_words=config.stt.filler_words,
+        #     endpointing_ms=config.stt.endpointing_ms,
+        #     sample_rate=config.stt.sample_rate
+        # ),
         
-        # Speech-to-Text - Deepgram Nova-3
-        stt=deepgram.STT(
-            model=config.stt.model,
-            language=config.stt.language,
-            interim_results=config.stt.interim_results,
-            punctuate=config.stt.punctuate,
-            smart_format=config.stt.smart_format,
-            filler_words=config.stt.filler_words,
-            endpointing_ms=config.stt.endpointing_ms,
-            sample_rate=config.stt.sample_rate
-        ),
-        
-        # Large Language Model - GPT-4o-mini
-        llm=openai.LLM(
-            model=config.llm.model,
-            temperature=config.llm.temperature
-        ),
+        # # Large Language Model - GPT-4o-mini
+        # llm=openai.LLM(
+        #     model=config.llm.model,
+        #     temperature=config.llm.temperature
+        # ),
         
         # Text-to-Speech - Cartesia Sonic-2
         # tts=cartesia.TTS(
@@ -844,12 +955,12 @@ WORKFLOW:
         #     speed=config.tts.speed,
         #     sample_rate=config.tts.sample_rate
         # )
-        tts = elevenlabs.TTS(
-                base_url="https://api.eu.residency.elevenlabs.io/v1",
-                voice_id="21m00Tcm4TlvDq8ikWAM",
-                language="en",
-                model="eleven_flash_v2_5"
-            ))
+        # tts = elevenlabs.TTS(
+        #         base_url="https://api.eu.residency.elevenlabs.io/v1",
+        #         voice_id="21m00Tcm4TlvDq8ikWAM",
+        #         language="en",
+        #         model="eleven_flash_v2_5"
+        #     ))
     
     logger.info("AgentSession configured successfully")
     

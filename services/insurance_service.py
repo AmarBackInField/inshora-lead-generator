@@ -10,7 +10,7 @@ from datetime import datetime
 from models.model import (
     HomeInsurance, AutoInsurance, FloodInsurance, LifeInsurance, CommercialInsurance,
     Person, ContactInfo, PolicyInfo, PropertyDetails, Driver, Vehicle,
-    BusinessDetails, CoverageDetails, QuoteRequest, CoverageType, PolicyType
+    BusinessDetails, CoverageDetails, QuoteRequest, CoverageType, PolicyType, Address
 )
 
 if TYPE_CHECKING:
@@ -151,7 +151,8 @@ class InsuranceService:
         
         # Add type-specific fields
         if insurance_type == "home":
-            lead_data["property_address"] = insurance_data.get("property", {}).get("address", "")
+            property_addr = insurance_data.get("property", {}).get("address", {})
+            lead_data["property_address"] = f"{property_addr.get('streetAddress', '')}, {property_addr.get('city', '')}, {property_addr.get('state', '')} {property_addr.get('zip_code', '')}"
             lead_data["current_provider"] = insurance_data.get("current_policy", {}).get("current_provider", "")
         elif insurance_type == "auto":
             vehicles = insurance_data.get("vehicles", [])
@@ -159,12 +160,16 @@ class InsuranceService:
                 lead_data["vehicle_info"] = f"{vehicles[0].get('make', '')} {vehicles[0].get('model', '')}"
             lead_data["current_provider"] = insurance_data.get("current_policy", {}).get("current_provider", "")
         elif insurance_type == "flood":
-            lead_data["home_address"] = insurance_data.get("home_address", "")
+            home_addr = insurance_data.get("home_address", {})
+            lead_data["home_address"] = f"{home_addr.get('streetAddress', '')}, {home_addr.get('city', '')}, {home_addr.get('state', '')} {home_addr.get('zip_code', '')}"
         elif insurance_type == "life":
+            life_addr = insurance_data.get("address", {})
+            lead_data["address"] = f"{life_addr.get('streetAddress', '')}, {life_addr.get('city', '')}, {life_addr.get('state', '')} {life_addr.get('zip_code', '')}"
             lead_data["appointment_requested"] = insurance_data.get("appointment_requested", False)
         elif insurance_type == "commercial":
             lead_data["business_name"] = insurance_data.get("business", {}).get("name", "")
-            lead_data["business_address"] = insurance_data.get("business", {}).get("address", "")
+            business_addr = insurance_data.get("business", {}).get("address", {})
+            lead_data["business_address"] = f"{business_addr.get('streetAddress', '')}, {business_addr.get('city', '')}, {business_addr.get('state', '')} {business_addr.get('zip_code', '')}"
         
         # Submit to AgencyZoom
         return self.agencyzoom_service.create_lead(lead_data)
@@ -197,18 +202,22 @@ class InsuranceService:
         self,
         full_name: str,
         date_of_birth: str,
+        phone: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str,
+        email: str,
+        current_provider: Optional[str] = None,
         spouse_name: Optional[str] = None,
         spouse_dob: Optional[str] = None,
-        property_address: str = "",
         has_solar_panels: bool = False,
         has_pool: bool = False,
         roof_age: int = 0,
         has_pets: bool = False,
-        current_provider: Optional[str] = None,
         renewal_date: Optional[str] = None,
-        renewal_premium: Optional[float] = None,
-        phone: str = "",
-        email: str = ""
+        renewal_premium: Optional[float] = None
     ) -> str:
         """Collect and validate home insurance data.
         
@@ -230,8 +239,16 @@ class InsuranceService:
                     date_of_birth=datetime.strptime(spouse_dob, "%Y-%m-%d").date()
                 )
             
+            address = Address(
+                streetAddress=street_address,
+                city=city,
+                state=state,
+                country=country,
+                zip_code=zip_code
+            )
+            
             property_details = PropertyDetails(
-                address=property_address,
+                address=address,
                 has_solar_panels=has_solar_panels,
                 has_pool=has_pool,
                 roof_age=roof_age
@@ -276,19 +293,19 @@ class InsuranceService:
         self,
         driver_name: str,
         driver_dob: str,
+        phone: str,
         license_number: str,
-        qualification: str,
-        profession: str,
-        gpa: Optional[float] = None,
-        vin: str = "",
-        vehicle_make: str = "",
-        vehicle_model: str = "",
+        vin: str,
+        vehicle_make: str,
+        vehicle_model: str,
         coverage_type: str = "full",
+        email: Optional[str] = "",
+        qualification: str = "Unknown",
+        profession: str = "Unknown",
+        gpa: Optional[float] = None,
         current_provider: Optional[str] = None,
         renewal_date: Optional[str] = None,
-        renewal_premium: Optional[float] = None,
-        phone: str = "",
-        email: str = ""
+        renewal_premium: Optional[float] = None
     ) -> str:
         """Collect and validate auto insurance data.
         
@@ -350,8 +367,13 @@ class InsuranceService:
     def collect_flood_insurance(
         self,
         full_name: str,
-        home_address: str,
-        email: str
+        email: str,
+        phone: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str
     ) -> str:
         """Collect and validate flood insurance data.
         
@@ -361,9 +383,18 @@ class InsuranceService:
         try:
             logger.info(f"Collecting flood insurance data for: {full_name}")
             
+            address = Address(
+                streetAddress=street_address,
+                city=city,
+                state=state,
+                country=country,
+                zip_code=zip_code
+            )
+            
             flood_insurance = FloodInsurance(
-                home_address=home_address,
+                home_address=address,
                 full_name=full_name,
+                phone=phone,
                 email=email
             )
             
@@ -389,10 +420,15 @@ class InsuranceService:
         self,
         full_name: str,
         date_of_birth: str,
-        appointment_requested: bool,
+        phone: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str,
+        email: Optional[str] = "",
+        appointment_requested: bool = False,
         appointment_date: Optional[str] = None,
-        phone: str = "",
-        email: str = "",
         policy_type: Optional[str] = None
     ) -> str:
         """Collect and validate life insurance data.
@@ -408,7 +444,15 @@ class InsuranceService:
                 date_of_birth=datetime.strptime(date_of_birth, "%Y-%m-%d").date()
             )
             
-            contact = ContactInfo(phone=phone, email=email)
+            address = Address(
+                streetAddress=street_address,
+                city=city,
+                state=state,
+                country=country,
+                zip_code=zip_code
+            )
+            
+            contact = ContactInfo(phone=phone, email=email or "noemail@pending.com")
             
             appt_datetime = None
             if appointment_date:
@@ -416,6 +460,7 @@ class InsuranceService:
             
             life_insurance = LifeInsurance(
                 insured=insured,
+                address=address,
                 appointment_requested=appointment_requested,
                 appointment_date=appt_datetime,
                 contact=contact,
@@ -443,16 +488,20 @@ class InsuranceService:
     def collect_commercial_insurance(
         self,
         business_name: str,
-        business_type: str,
-        business_address: str,
+        phone: str,
+        street_address: str,
+        city: str,
+        state: str,
+        country: str,
+        zip_code: str,
+        business_type: str = "General",
         inventory_limit: Optional[float] = None,
         building_coverage: bool = False,
         building_coverage_limit: Optional[float] = None,
         current_provider: Optional[str] = None,
         renewal_date: Optional[str] = None,
         renewal_premium: Optional[float] = None,
-        phone: str = "",
-        email: str = ""
+        email: Optional[str] = ""
     ) -> str:
         """Collect and validate commercial insurance data.
         
@@ -462,10 +511,18 @@ class InsuranceService:
         try:
             logger.info(f"Collecting commercial insurance data for: {business_name}")
             
+            address = Address(
+                streetAddress=street_address,
+                city=city,
+                state=state,
+                country=country,
+                zip_code=zip_code
+            )
+            
             business = BusinessDetails(
                 name=business_name,
                 type=business_type,
-                address=business_address
+                address=address
             )
             
             coverage = CoverageDetails(
@@ -480,7 +537,7 @@ class InsuranceService:
                 renewal_premium=renewal_premium
             )
             
-            contact = ContactInfo(phone=phone, email=email)
+            contact = ContactInfo(phone=phone, email=email or "noemail@pending.com")
             
             commercial_insurance = CommercialInsurance(
                 business=business,
@@ -560,18 +617,20 @@ class InsuranceService:
             logger.info(f"Quote request data: {json.dumps(quote_request.model_dump(), default=str)}")
             
             # Submit to AgencyZoom if service is available
+            # Note: AgencyZoom submission is now handled by submit_collected_data_to_agencyzoom()
+            # which provides more comprehensive data with proper address fields
             agencyzoom_submitted = False
-            if self.agencyzoom_service:
-                try:
-                    logger.info("Attempting to submit to AgencyZoom...")
-                    agencyzoom_result = self._submit_to_agencyzoom(quote_request.model_dump())
-                    if agencyzoom_result:
-                        agencyzoom_submitted = True
-                        logger.info("✅ Successfully submitted to AgencyZoom")
-                    else:
-                        logger.warning("⚠️ AgencyZoom submission returned None")
-                except Exception as az_error:
-                    logger.error(f"❌ AgencyZoom submission failed: {az_error}", exc_info=True)
+            # if self.agencyzoom_service:
+            #     try:
+            #         logger.info("Attempting to submit to AgencyZoom...")
+            #         agencyzoom_result = self._submit_to_agencyzoom(quote_request.model_dump())
+            #         if agencyzoom_result:
+            #             agencyzoom_submitted = True
+            #             logger.info("✅ Successfully submitted to AgencyZoom")
+            #         else:
+            #             logger.warning("⚠️ AgencyZoom submission returned None")
+            #     except Exception as az_error:
+            #         logger.error(f"❌ AgencyZoom submission failed: {az_error}", exc_info=True)
             
             # Mark as submitted
             self.quote_submitted = True
@@ -580,8 +639,9 @@ class InsuranceService:
             logger.info("=== SUBMIT QUOTE REQUEST COMPLETED SUCCESSFULLY ===")
             
             response_msg = f"Perfect! Your {self.insurance_type} insurance quote request has been submitted successfully."
-            if agencyzoom_submitted:
-                response_msg += " Your information has been automatically added to our CRM system."
+            # Note: CRM submission happens via submit_collected_data_to_agencyzoom()
+            # if agencyzoom_submitted:
+            #     response_msg += " Your information has been automatically added to our CRM system."
             response_msg += " Our team will review your information and contact you shortly with a personalized quote. Is there anything else I can help you with today?"
             
             return response_msg
