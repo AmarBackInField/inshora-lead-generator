@@ -1,0 +1,14 @@
+# Minimal requirements for backend_server.py only
+# This is a lightweight backend that creates LiveKit rooms and dispatches agents
+
+# Web Framework
+Flask==3.0.0
+flask-cors==4.0.0
+
+# LiveKit API (for room creation and agent dispatch)
+livekit
+livekit-api
+
+# Environment Variables
+python-dotenv==1.0.0
+

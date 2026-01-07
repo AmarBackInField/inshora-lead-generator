@@ -230,7 +230,7 @@
                 updateStatus('connecting', 'Connecting...');
                 
                 // Call backend to create room and dispatch agent
-                const response = await fetch('http://localhost:5000/create_room', {
+                const response = await fetch('http://localhost:8001/create_room', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
