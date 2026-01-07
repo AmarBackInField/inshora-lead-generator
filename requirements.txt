@@ -20,7 +20,8 @@ openpyxl
 beautifulsoup4
 requests
 xmltodict
-
+flask
+flask-cors
 # Async Support
 aiohttp
 langchain-text-splitters
