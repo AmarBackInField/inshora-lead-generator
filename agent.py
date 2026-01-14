@@ -24,6 +24,7 @@ from livekit.agents import (
 )
 from livekit.plugins import deepgram, openai, cartesia, silero
 from livekit.plugins import elevenlabs
+from motor.motor_asyncio import AsyncIOMotorClient
 
 
 # from RAGService import RAGService
@@ -60,7 +61,22 @@ config.rag.openai_api_key = os.getenv("OPENAI_API_KEY", config.rag.openai_api_ke
 #     qdrant_api_key=config.rag.qdrant_api_key,
 #     openai_api_key=config.rag.openai_api_key
 # )
-
+async def mongodb_service():
+    """Get config from MongoDB and close connection after fetching."""
+    client = None
+    try:
+        client = AsyncIOMotorClient(os.getenv("MONGODB_URI"))
+        db = client[os.getenv("MONGODB_DB", "Inshoraa")]
+        config_collection = db["inbound-config"]
+        config = await config_collection.find_one()
+        return config
+    except Exception as e:
+        logger.error(f"Error fetching config from MongoDB: {e}")
+        return None
+    finally:
+        if client:
+            client.close()
+            logger.info("MongoDB connection closed")
 
 class TelephonyAgent(Agent):
     """Enhanced Telephony Agent with Insurance Quote Collection capabilities."""
@@ -844,23 +860,23 @@ async def entrypoint(ctx: JobContext):
     participant = await ctx.wait_for_participant()
     logger.info(f"Phone call connected from participant: {participant.identity}")
     
+    # Fetch system_prompt from MongoDB config
+    mongo_config = await mongodb_service()
+    custom_system_prompt = ""
+    if mongo_config and mongo_config.get("system_prompt"):
+        custom_system_prompt = mongo_config.get("system_prompt")
+        logger.info(f"Loaded custom system_prompt from MongoDB ({len(custom_system_prompt)} characters)")
+    else:
+        logger.info("No custom system_prompt found in MongoDB, using default instructions only")
+    
     # Initialize all services
     ams360_service = AMS360Service()
     agencyzoom_service = AgencyZoomService()
     insurance_service = InsuranceService(agencyzoom_service=agencyzoom_service)
     
     # Build comprehensive instructions with knowledge base
-#     base_instructions = AGENT_SYSTEM_INSTRUCTIONS
-    
-    instructions="""You are an AI insurance assistant for Inshora Group.
-
-INTRODUCTION: "Hello, this is the AI insurance assistant from Inshora Group. How can I help you today?"
-
-PERSONALITY:
-- Professional, warm, and concise
-- Speak clearly at moderate pace
-- Patient but efficient
-- Guide naturally through information collection
+    # Default instructions
+    default_instructions = """
 
 CORE WORKFLOWS:
 
@@ -893,6 +909,12 @@ ESCALATION: Transfer to human if customer mentions: lawsuit, claim denied, urgen
 
 DATES: Request format YYYY-MM-DD (e.g., "1980-05-15")
 VIN: Must be exactly 17 characters"""
+
+    # Combine default instructions with custom system_prompt from MongoDB
+    if custom_system_prompt:
+        instructions = f"{custom_system_prompt}\n\n{default_instructions}"
+    else:
+        instructions = default_instructions
 
     # Number of characters in the instructions
     num_characters = len(instructions)
@@ -939,38 +961,7 @@ VIN: Must be exactly 17 characters"""
             ),
             max_session_duration=1800,
         ))
-        # # Speech-to-Text - Deepgram Nova-3
-        # stt=deepgram.STT(
-        #     model=config.stt.model,
-        #     language=config.stt.language,
-        #     interim_results=config.stt.interim_results,
-        #     punctuate=config.stt.punctuate,
-        #     smart_format=config.stt.smart_format,
-        #     filler_words=config.stt.filler_words,
-        #     endpointing_ms=config.stt.endpointing_ms,
-        #     sample_rate=config.stt.sample_rate
-        # ),
         
-        # # Large Language Model - GPT-4o-mini
-        # llm=openai.LLM(
-        #     model=config.llm.model,
-        #     temperature=config.llm.temperature
-        # ),
-        
-        # Text-to-Speech - Cartesia Sonic-2
-        # tts=cartesia.TTS(
-        #     model=config.tts.model,
-        #     voice=config.tts.voice,
-        #     language=config.tts.language,
-        #     speed=config.tts.speed,
-        #     sample_rate=config.tts.sample_rate
-        # )
-        # tts = elevenlabs.TTS(
-        #         base_url="https://api.eu.residency.elevenlabs.io/v1",
-        #         voice_id="21m00Tcm4TlvDq8ikWAM",
-        #         language="en",
-        #         model="eleven_flash_v2_5"
-        #     ))
     
     logger.info("AgentSession configured successfully")
     

@@ -12,7 +12,7 @@ pymongo
 langchain
 langchain-openai
 qdrant-client
-
+motor
 # Data Processing
 pdfplumber
 pandas
