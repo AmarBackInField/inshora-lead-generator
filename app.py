@@ -11,7 +11,9 @@ from typing import Dict, Optional, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from motor.motor_asyncio import AsyncIOMotorClient
 import openai
 from outboundService.services.call_service import make_outbound_call
 import tempfile
@@ -144,6 +146,22 @@ thread_policy_details: Dict[str, Dict] = {}
 
 # Store escalation state per thread (for tracking handover status)
 thread_escalation_state: Dict[str, Dict] = {}
+
+# MongoDB client for agent prompt config (lazy init)
+_mongo_client = None
+MONGO_CONFIG_COLLECTION = "inbound-config"
+
+
+def get_mongo_config_collection():
+    """Get MongoDB inbound-config collection (used by voice agent for system_prompt)."""
+    global _mongo_client
+    uri = os.getenv("MONGODB_URI")
+    if not uri:
+        raise ValueError("MONGODB_URI is not set")
+    if _mongo_client is None:
+        _mongo_client = AsyncIOMotorClient(uri)
+    db_name = os.getenv("MONGODB_DB", "Inshoraa")
+    return _mongo_client[db_name][MONGO_CONFIG_COLLECTION]
 
 
 # ===========================
@@ -1494,6 +1512,70 @@ async def delete_collection(collection_name: str):
         raise HTTPException(status_code=500, detail=f"Error deleting collection: {str(e)}")
 
 
+# ===========================
+# AGENT PROMPT (MongoDB)
+# ===========================
+
+class PromptUpdateBody(BaseModel):
+    """Request body for updating the voice agent prompts in MongoDB."""
+    system_prompt: str = ""
+    default_instructions: str = ""
+
+
+@app.get("/api/prompt", tags=["Agent Prompt"])
+async def get_agent_prompt():
+    """
+    Get the current voice agent system_prompt and default_instructions from MongoDB (inbound-config).
+    The telephony agent builds instructions from both fields.
+    """
+    try:
+        coll = get_mongo_config_collection()
+        doc = await coll.find_one()
+        if not doc:
+            return {"system_prompt": "", "default_instructions": ""}
+        return {
+            "system_prompt": doc.get("system_prompt") or "",
+            "default_instructions": doc.get("default_instructions") or ""
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error fetching prompt from MongoDB: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching prompt: {str(e)}")
+
+
+@app.put("/api/prompt", tags=["Agent Prompt"])
+async def update_agent_prompt(body: PromptUpdateBody):
+    """
+    Update the voice agent system_prompt and default_instructions in MongoDB (inbound-config).
+    The telephony agent reads both and combines them into its instructions.
+    """
+    try:
+        coll = get_mongo_config_collection()
+        update = {
+            "system_prompt": body.system_prompt,
+            "default_instructions": body.default_instructions,
+            "updated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        await coll.update_one({}, {"$set": update}, upsert=True)
+        logger.info(f"Updated prompt in MongoDB: system_prompt={len(body.system_prompt)} chars, default_instructions={len(body.default_instructions)} chars")
+        return {"status": "ok", "message": "Prompt updated successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error updating prompt in MongoDB: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error updating prompt: {str(e)}")
+
+
+@app.get("/index.html", tags=["General"])
+async def serve_prompt_editor():
+    """Serve the prompt editor page (edit voice agent system prompt in MongoDB)."""
+    path = os.path.join(os.path.dirname(__file__), "index.html")
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="index.html not found")
+    return FileResponse(path, media_type="text/html")
+
+
 @app.get("/health", tags=["General"])
 async def health_check():
     """Health check endpoint."""
@@ -1538,6 +1620,11 @@ async def root():
                 "POST /rag/ingest": "Ingest data into knowledge base (URL, PDF, CSV)",
                 "GET /rag/collections": "Get number of collections and statistics",
                 "DELETE /rag/collection/{collection_name}": "Delete a collection by name"
+            },
+            "agent_prompt": {
+                "GET /api/prompt": "Get voice agent system_prompt and default_instructions from MongoDB",
+                "PUT /api/prompt": "Update both in MongoDB (body: { \"system_prompt\": \"...\", \"default_instructions\": \"...\" })",
+                "GET /index.html": "Prompt editor UI"
             },
             "general": {
                 "GET /health": "Health check",
